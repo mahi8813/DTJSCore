@@ -109,7 +109,7 @@
 
 + (DTJSValue *)valueWithValAtStackTopInContext:(DTJSContext *)context{
     
-    return [DTJSValue valueWithValAtStackIndex:-1 inContext:context];
+    return [DTJSValue valueWithValAtStackIndex:duk_require_top_index(context.dukContext) inContext:context];
 }
 
 #pragma mark - DTJSValue stack operations
@@ -141,6 +141,11 @@
 - (void)pop{
     
     duk_pop(self.context.dukContext);
+}
+
+- (void)pop2{
+    
+    duk_pop_2(self.context.dukContext);
 }
 
 @end

@@ -59,15 +59,15 @@
     DTJSValue *jsValue = nil;
     if(script){
         duk_push_string(self.dukContext, [script cStringUsingEncoding:NSUTF8StringEncoding]);//[src]
-        if (duk_peval(self.dukContext) != 0) {//[err]
+        if (duk_peval(self.dukContext) != 0) {//[... err]
             DTJSDebugLog(@"eval failed");
             const char *error = duk_safe_to_string(self.dukContext, -1);
             jsValue = [DTJSValue valueWithNewErrorFromMessage:[NSString stringWithUTF8String:error] inContext:self];
-        } else {//[res]
+        } else {//[... res]
             DTJSDebugLog(@"eval successful");
             jsValue = [DTJSValue valueWithValAtStackTopInContext:self];
         }
-        duk_pop(self.dukContext);//pop [res]
+        duk_pop(self.dukContext);//pop [... res]
     }
     return jsValue;
 }
@@ -77,15 +77,15 @@
     DTJSValue *jsValue = nil;
     if(fileURL){
         const char *filePath = [[fileURL path] cStringUsingEncoding:NSUTF8StringEncoding];
-        if (duk_peval_file(self.dukContext, filePath) != 0) {//[err]
+        if (duk_peval_file(self.dukContext, filePath) != 0) {//[... err]
             DTJSDebugLog(@"eval failed");
             const char *error = duk_safe_to_string(self.dukContext, -1);
             jsValue = [DTJSValue valueWithNewErrorFromMessage:[NSString stringWithUTF8String:error] inContext:self];
-        } else {//[res]
+        } else {//[... res]
             DTJSDebugLog(@"eval successful");
             jsValue = [DTJSValue valueWithValAtStackTopInContext:self];
         }
-        duk_pop(self.dukContext);//pop [res]
+        duk_pop(self.dukContext);//pops [... res]
     }
     return jsValue;
 }
@@ -115,31 +115,24 @@
 
 - (DTJSValue *)globalObject{
     
-    duk_push_global_object(self.dukContext);
-    return [DTJSValue valueWithValAtStackTopInContext:self];
+    duk_push_global_object(self.dukContext);//[... gbl]
+    DTJSValue *jsValue =  [DTJSValue valueWithValAtStackTopInContext:self];
+    duk_pop(self.dukContext);//pops [... gbl]
+    return jsValue;
 }
 
 @end
 
-@implementation DTJSContext (SubScript)
+@implementation DTJSContext (SubscriptSupport)
 
-- (DTJSValue *)objectForKeyedSubscript:(NSString *)key{
+- (DTJSValue *)objectForKeyedSubscript:(id)key{
     
-    DTJSValue *jsValue = nil;
-    duk_push_global_object(self.dukContext);//[global]
-    duk_get_prop_string(self.dukContext, -1, [key cStringUsingEncoding:NSUTF8StringEncoding]);//[global val]
-    jsValue = [DTJSValue valueWithValAtStackTopInContext:self];
-    duk_pop_2(self.dukContext);//pops [global val]
-    return jsValue;
+    return [self globalObject][key];
 }
 
-- (void)setObject:(id)object forKeyedSubscript:(NSString *)key{
+- (void)setObject:(id)object forKeyedSubscript:(NSObject <NSCopying> *)key{
     
-    duk_push_global_object(self.dukContext);//[ global]
-    DTJSValue *pushObj = [DTJSValue valueWithObject:object inContext:self];
-    [pushObj push];//[ global val]
-    duk_put_prop_string(self.dukContext, -2, [key cStringUsingEncoding:NSUTF8StringEncoding]);//[ global]
-    duk_pop(self.dukContext);//pops global
+    [self globalObject][key] = object;
 }
 
 @end

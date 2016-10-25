@@ -31,7 +31,7 @@
 @end
 
 
-@interface DTJSContext (SubScript)
+@interface DTJSContext (SubscriptSupport)
 
 - (DTJSValue *)objectForKeyedSubscript:(id)key;
 - (void)setObject:(id)object forKeyedSubscript:(NSObject <NSCopying> *)key;

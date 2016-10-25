@@ -153,7 +153,7 @@ DUK_C_FUNCTION(ObjectPropertySetter){
     
     DTJSValue *jsValue = nil;
     if(context){
-        if(value && [value isKindOfClass:[NSObject class]]){
+        if(value){
             if([value isKindOfClass:[NSString class]]){
                 jsValue = [DTJSValue valueWithString:value inContext:context];
             }
@@ -166,14 +166,14 @@ DUK_C_FUNCTION(ObjectPropertySetter){
             else if ([value isKindOfClass:[NSNumber class]]){
                 jsValue = [DTJSValue valueWithDouble:[value doubleValue] inContext:context];
             }
-            else{
+            else if ([value isKindOfClass:[NSObject class]]){
                 jsValue = [[DTJSValue alloc] initWithContext:context];
                 jsValue.isObject = true;
-                duk_idx_t obj_idx = duk_push_object(context.dukContext);
+                duk_idx_t obj_idx = duk_push_object(context.dukContext);//[... obj]
                 duk_push_string(context.dukContext, [NSStringFromClass([value class]) cStringUsingEncoding:NSUTF8StringEncoding]);
                 duk_put_prop_string(context.dukContext, obj_idx, "class");
                 jsValue.value->objectValue = duk_get_heapptr(context.dukContext, obj_idx);
-                duk_pop(context.dukContext);//pops object
+                duk_pop(context.dukContext);//pops [... obj]
             }
         }
         else{
@@ -403,38 +403,35 @@ DUK_C_FUNCTION(ObjectPropertySetter){
 
 - (DTJSValue *)valueForProperty:(NSString *)property{
     
-    DTJSValue *jsValue = nil;
-    if(self.isArray ||
-       self.isObject){
-        duk_idx_t obj_idx = [self push];
-        duk_get_prop_string(self.context.dukContext, obj_idx, [property cStringUsingEncoding:NSUTF8StringEncoding]);
-        jsValue  = [DTJSValue valueWithValAtStackTopInContext:self.context];
-        duk_pop(self.context.dukContext); //pops value
-        [self pop]; //pops obj
+    DTJSValue *jsValue = [DTJSValue valueWithUndefinedInContext:self.context];
+    if(![property isKindOfClass:[NSString class]]){
+        return jsValue;
     }
+    duk_idx_t obj_idx = [self push];//[... obj]
+    if(duk_get_prop_string(self.context.dukContext, obj_idx, [property cStringUsingEncoding:NSUTF8StringEncoding])){//[... obj val]
+        jsValue  = [DTJSValue valueWithValAtStackTopInContext:self.context];
+    }
+    [self pop2];//pops [obj val]
     return jsValue;
 }
 
 - (void)setValue:(id)value forProperty:(NSString *)property{
 
-    if(self.isArray ||
-       self.isObject){
-        duk_idx_t obj_idx = [self push];
-        [value push]; //pushes value
-        duk_put_prop_string(self.context.dukContext, obj_idx, [property cStringUsingEncoding:NSUTF8StringEncoding]);
-        duk_pop(self.context.dukContext); //pops value
-        [self pop]; //pops obj
+    if([property isKindOfClass:[NSString class]]){
+        duk_idx_t obj_idx = [self push];//[... obj]
+        [[DTJSValue valueWithObject:value inContext:self.context] push];//[... obj val]
+        duk_put_prop_string(self.context.dukContext, obj_idx, [property cStringUsingEncoding:NSUTF8StringEncoding]);//[... obj]
+        [self pop]; //pops [... obj]
     }
 }
 
 - (BOOL)deleteProperty:(NSString *)property{
 
     BOOL retVal = false;
-    if(self.isArray ||
-       self.isObject){
-        duk_idx_t obj_idx = [self push];
+    if([property isKindOfClass:[NSString class]]){
+        duk_idx_t obj_idx = [self push];//[... obj]
         retVal = duk_del_prop_string(self.context.dukContext, obj_idx, [property cStringUsingEncoding:NSUTF8StringEncoding]);
-        [self pop]; //pops obj
+        [self pop]; //pops [... obj]
     }
     return retVal;
 }
@@ -442,15 +439,13 @@ DUK_C_FUNCTION(ObjectPropertySetter){
 - (BOOL)hasProperty:(NSString *)property{
 
     BOOL retVal = false;
-    if(self.isArray ||
-       self.isObject){
-        duk_idx_t obj_idx = [self push];
+    if([property isKindOfClass:[NSString class]]){
+        duk_idx_t obj_idx = [self push];//[... obj]
         retVal = duk_has_prop_string(self.context.dukContext, obj_idx, [property cStringUsingEncoding:NSUTF8StringEncoding]);
-        [self pop]; //pops obj
+        [self pop]; //pops [... obj]
     }
     return retVal;
 }
-
 
 /*!
  * Data Descriptor: contains one or both of the keys value and writable. Optionally containing one or both of the keys "enumerable" and "configurable"
@@ -524,37 +519,65 @@ DUK_C_FUNCTION(ObjectPropertySetter){
                     }
                 }
             }
-            duk_def_prop(self.context.dukContext, obj_idx, flags);
-            [self pop];//pops object
+            duk_def_prop(self.context.dukContext, obj_idx, flags);//[... obj]
+            [self pop];//pops [... obj]
         }
     }
 }
 
 - (DTJSValue *)valueAtIndex:(NSUInteger)index{
 
-    DTJSValue *jsValue = nil;
-    if(self.isArray ||
-       self.isObject){
-        duk_idx_t obj_idx = [self push];
-        duk_get_prop_index(self.context.dukContext, obj_idx, (duk_uarridx_t)index);
-        jsValue  = [DTJSValue valueWithValAtStackTopInContext:self.context];
-        duk_pop(self.context.dukContext); //pops value
-        [self pop]; //pops obj
+    DTJSValue *jsValue = [DTJSValue valueWithUndefinedInContext:self.context];
+    duk_idx_t obj_idx = [self push];//[... obj]
+    if(duk_get_prop_index(self.context.dukContext, obj_idx, (duk_uarridx_t)index)){//[... obj val]
+        jsValue  = [DTJSValue valueWithValAtStackTopInContext:self.context];//[... obj val]
     }
+    [self pop2];//pops [obj val]
     return jsValue;
 }
 
 - (void)setValue:(id)value atIndex:(NSUInteger)index{
-
-    if(self.isArray ||
-       self.isObject){
-        duk_idx_t obj_idx = [self push];
-        [value push]; //pushes value
-        duk_put_prop_index(self.context.dukContext, obj_idx, (duk_uarridx_t)index);
-        duk_pop(self.context.dukContext); //pops value
-        [self pop]; //pops obj
-    }
+    
+    duk_idx_t obj_idx = [self push];//[... obj]
+    [[DTJSValue valueWithObject:value inContext:self.context] push];//[... obj val]
+    duk_put_prop_index(self.context.dukContext, obj_idx, (duk_uarridx_t)index);//[... obj]
+    [self pop]; //pops [... obj]
 }
 
+@end
+
+@implementation DTJSValue (SubscriptSupport)
+
+- (DTJSValue *)objectForKeyedSubscript:(id)key{
+    
+    DTJSValue *jsValue = [DTJSValue valueWithUndefinedInContext:self.context];
+    if(![key isKindOfClass:[NSString class]]){
+        key = [[DTJSValue valueWithObject:key inContext:self.context] toString];
+        if(!key){
+            return jsValue;
+        }
+    }
+    return [self valueForProperty:key];
+}
+
+- (DTJSValue *)objectAtIndexedSubscript:(NSUInteger)index{
+    
+    return [self valueAtIndex:index];
+}
+
+- (void)setObject:(id)object forKeyedSubscript:(NSObject <NSCopying> *)key{
+
+    if (![key isKindOfClass:[NSString class]]) {
+        key = [[DTJSValue valueWithObject:key inContext:self.context] toString];
+        if (!key)
+            return;
+    }
+    [self setValue:object forProperty:(NSString *)key];
+}
+
+- (void)setObject:(id)object atIndexedSubscript:(NSUInteger)index{
+
+    [self setValue:object atIndex:index];
+}
 
 @end

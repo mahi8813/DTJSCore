@@ -62,3 +62,12 @@ EXTERN_API(NSString *const JSPropertyDescriptorSetKey);
 - (void)setValue:(id)value atIndex:(NSUInteger)index;
 
 @end
+
+@interface DTJSValue (SubscriptSupport)
+
+- (DTJSValue *)objectForKeyedSubscript:(id)key;
+- (DTJSValue *)objectAtIndexedSubscript:(NSUInteger)index;
+- (void)setObject:(id)object forKeyedSubscript:(NSObject <NSCopying> *)key;
+- (void)setObject:(id)object atIndexedSubscript:(NSUInteger)index;
+
+@end
