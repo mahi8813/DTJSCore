@@ -74,7 +74,7 @@ DUK_C_FUNCTION(ObjectPropertySetter){
 
     DTJSValue *jsValue = nil;
     if(context){
-        if(value && [value isKindOfClass:[NSString class]]){
+        if([value isKindOfClass:[NSString class]]){
             jsValue = [[DTJSValue alloc] initWithContext:context];
             jsValue.isString = true;
             jsValue.value->objectValue = (void *)duk_push_string(context.dukContext, [value cStringUsingEncoding:NSUTF8StringEncoding]);
@@ -85,32 +85,15 @@ DUK_C_FUNCTION(ObjectPropertySetter){
 }
 
 + (DTJSValue *)valueWithArray:(NSArray *)value inContext:(DTJSContext *)context{
-   
+    
     DTJSValue *jsValue = nil;
     if(context){
-        if(value && [value isKindOfClass:[NSArray class]]){
-            jsValue = [[DTJSValue alloc] initWithContext:context];
-            jsValue.isArray = true;
-            duk_idx_t arr_idx = duk_push_array(context.dukContext);
-            duk_uarridx_t count = 0;
-            for (id obj in value) {
-                if([obj isKindOfClass:[NSObject class]]){
-                    if([obj isKindOfClass:[NSNull class]]){
-                        duk_push_null(context.dukContext);
-                    }
-                    else if([obj isKindOfClass:[NSNumber class]]){
-                        duk_push_number(context.dukContext, [obj doubleValue]);
-                    }
-                    else{
-                        DTJSValue *temp = [DTJSValue valueWithObject:obj inContext:context];
-                        duk_push_heapptr(context.dukContext, temp.value->objectValue);
-                    }
-                    duk_put_prop_index(context.dukContext, arr_idx, count++);
-                }
+        if([value isKindOfClass:[NSArray class]]){
+            jsValue = [DTJSValue valueWithNewArrayInContext:context];
+            NSUInteger count = [value count];
+            for (int i = 0; i < count; i++) {
+                jsValue[i] = value[i];
             }
-            jsValue.value->objectValue = duk_get_heapptr(context.dukContext, arr_idx);
-            duk_pop(context.dukContext);//pops array
-            
         }
     }
     return jsValue;
@@ -120,30 +103,14 @@ DUK_C_FUNCTION(ObjectPropertySetter){
     
     DTJSValue *jsValue = nil;
     if(context){
-        if(value && [value isKindOfClass:[NSDictionary class]]){
-            jsValue = [[DTJSValue alloc] initWithContext:context];
-            jsValue.isObject = true;
-            duk_idx_t obj_idx = duk_push_object(context.dukContext);
+        if([value isKindOfClass:[NSDictionary class]]){
+            jsValue = [DTJSValue valueWithNewObjectInContext:context];
             for (id key in value) {
-                if([key isKindOfClass:[NSString class]]){
-                    id obj = [value objectForKey:key];
-                    if([obj isKindOfClass:[NSObject class]]){
-                        if([obj isKindOfClass:[NSNull class]]){
-                            duk_push_null(context.dukContext);
-                        }
-                        else if([obj isKindOfClass:[NSNumber class]]){
-                            duk_push_number(context.dukContext, [obj doubleValue]);
-                        }
-                        else{
-                            DTJSValue *temp = [DTJSValue valueWithObject:obj inContext:context];
-                            duk_push_heapptr(context.dukContext, temp.value->objectValue);
-                        }
-                        duk_put_prop_string(context.dukContext, obj_idx, [key cStringUsingEncoding:NSUTF8StringEncoding]);
-                    }
+                id obj = [value objectForKey:key];
+                if(obj){
+                    jsValue[key] = obj;
                 }
             }
-            jsValue.value->objectValue = duk_get_heapptr(context.dukContext, obj_idx);
-            duk_pop(context.dukContext);//pops object
         }
     }
     return jsValue;
@@ -167,13 +134,8 @@ DUK_C_FUNCTION(ObjectPropertySetter){
                 jsValue = [DTJSValue valueWithDouble:[value doubleValue] inContext:context];
             }
             else if ([value isKindOfClass:[NSObject class]]){
-                jsValue = [[DTJSValue alloc] initWithContext:context];
-                jsValue.isObject = true;
-                duk_idx_t obj_idx = duk_push_object(context.dukContext);//[... obj]
-                duk_push_string(context.dukContext, [NSStringFromClass([value class]) cStringUsingEncoding:NSUTF8StringEncoding]);
-                duk_put_prop_string(context.dukContext, obj_idx, "class");
-                jsValue.value->objectValue = duk_get_heapptr(context.dukContext, obj_idx);
-                duk_pop(context.dukContext);//pops [... obj]
+                jsValue  = [DTJSValue valueWithNewObjectInContext:context];
+                jsValue[@"class"] = NSStringFromClass([value class]);
             }
         }
         else{
@@ -221,8 +183,9 @@ DUK_C_FUNCTION(ObjectPropertySetter){
     if(context){
         jsValue = [[DTJSValue alloc] initWithContext:context];
         jsValue.isObject = true;
-        duk_idx_t obj_idx = duk_push_object(context.dukContext);
-        jsValue.value->objectValue = duk_get_heapptr(context.dukContext, obj_idx);
+        duk_idx_t obj_idx = duk_push_object(context.dukContext);//[... obj]
+        jsValue.value->objectValue = duk_require_heapptr(context.dukContext, obj_idx);
+        duk_pop(context.dukContext);//pops [... obj]
     }
     return jsValue;
 }
@@ -233,8 +196,9 @@ DUK_C_FUNCTION(ObjectPropertySetter){
     if(context){
         jsValue = [[DTJSValue alloc] initWithContext:context];
         jsValue.isArray = true;
-        duk_idx_t arr_idx = duk_push_array(context.dukContext);
-        jsValue.value->objectValue = duk_get_heapptr(context.dukContext, arr_idx);
+        duk_idx_t arr_idx = duk_push_array(context.dukContext);//[... arr]
+        jsValue.value->objectValue = duk_require_heapptr(context.dukContext, arr_idx);
+        duk_pop(context.dukContext);//pops [... arr]
     }
     return jsValue;
 }
@@ -245,8 +209,9 @@ DUK_C_FUNCTION(ObjectPropertySetter){
     if(context){
         jsValue = [[DTJSValue alloc] initWithContext:context];
         jsValue.isObject = true;
-        duk_idx_t err_idx =  duk_push_error_object(context.dukContext, DUK_ERR_ERROR, [message cStringUsingEncoding:NSUTF8StringEncoding]);
-        jsValue.value->objectValue = duk_get_heapptr(context.dukContext, err_idx);
+        duk_idx_t err_idx =  duk_push_error_object(context.dukContext, DUK_ERR_ERROR, [message cStringUsingEncoding:NSUTF8StringEncoding]);//[... err]
+        jsValue.value->objectValue = duk_require_heapptr(context.dukContext, err_idx);
+        duk_pop(context.dukContext);//pops [... err]
     }
     return jsValue;
 }
@@ -454,8 +419,8 @@ DUK_C_FUNCTION(ObjectPropertySetter){
  */
 - (void)defineProperty:(NSString *)property descriptor:(id)descriptor{
     
-    if(property && [property isKindOfClass:[NSString class]]){
-        if(descriptor && [descriptor isKindOfClass:[NSDictionary class]]){
+    if([property isKindOfClass:[NSString class]]){
+        if([descriptor isKindOfClass:[NSDictionary class]]){
             
             duk_idx_t obj_idx = [self push];//[... obj]
             duk_push_string(self.context.dukContext, [property cStringUsingEncoding:NSUTF8StringEncoding]);//[... obj key]
@@ -472,8 +437,7 @@ DUK_C_FUNCTION(ObjectPropertySetter){
             duk_uint_t flags = 0;
             if(isDataDecriptor){ //Data Descriptor
                 if(value){
-                    id tempJSValue = [DTJSValue valueWithObject:value inContext:self.context];
-                    [tempJSValue push];//[... obj key val]
+                    [[DTJSValue valueWithObject:value inContext:self.context] push];//[... obj key val]
                     flags = DUK_DEFPROP_HAVE_VALUE;
                 }
                 if(writable){
