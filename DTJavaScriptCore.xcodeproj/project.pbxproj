@@ -7,8 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		F03BBCE51D7235A0006558B5 /* DTJSValue+Internal.h in Headers */ = {isa = PBXBuildFile; fileRef = F03BBCE31D7235A0006558B5 /* DTJSValue+Internal.h */; };
-		F03BBCE61D7235A0006558B5 /* DTJSValue+Internal.m in Sources */ = {isa = PBXBuildFile; fileRef = F03BBCE41D7235A0006558B5 /* DTJSValue+Internal.m */; settings = {COMPILER_FLAGS = "-w"; }; };
+		F03BBCE51D7235A0006558B5 /* DTJSValueInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = F03BBCE31D7235A0006558B5 /* DTJSValueInternal.h */; };
 		F0A7D9951D70C08A004FF294 /* JSSources in Resources */ = {isa = PBXBuildFile; fileRef = F0A7D9941D70C08A004FF294 /* JSSources */; };
 		F0B502051D700A2200043156 /* DTJavaScriptCore.h in Headers */ = {isa = PBXBuildFile; fileRef = F0B502041D700A2200043156 /* DTJavaScriptCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		F0B5020C1D700A2200043156 /* DTJavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F0B502011D700A2200043156 /* DTJavaScriptCore.framework */; };
@@ -24,6 +23,7 @@
 		F0B502531D700DE200043156 /* DTJSVirtualMachine.h in Headers */ = {isa = PBXBuildFile; fileRef = F0B5024C1D700DE200043156 /* DTJSVirtualMachine.h */; };
 		F0B502541D700DE200043156 /* DTJSVirtualMachine.m in Sources */ = {isa = PBXBuildFile; fileRef = F0B5024D1D700DE200043156 /* DTJSVirtualMachine.m */; };
 		F0B502561D700E2F00043156 /* DTJSContextTests.m in Sources */ = {isa = PBXBuildFile; fileRef = F0B502551D700E2F00043156 /* DTJSContextTests.m */; };
+		F0B7181B1DD606D0003441F0 /* DTJSContextInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = F0B7181A1DD606D0003441F0 /* DTJSContextInternal.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -37,8 +37,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		F03BBCE31D7235A0006558B5 /* DTJSValue+Internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "DTJSValue+Internal.h"; sourceTree = "<group>"; };
-		F03BBCE41D7235A0006558B5 /* DTJSValue+Internal.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "DTJSValue+Internal.m"; sourceTree = "<group>"; };
+		F03BBCE31D7235A0006558B5 /* DTJSValueInternal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DTJSValueInternal.h; sourceTree = "<group>"; };
 		F0A7D9941D70C08A004FF294 /* JSSources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = JSSources; sourceTree = "<group>"; };
 		F0B502011D700A2200043156 /* DTJavaScriptCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = DTJavaScriptCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0B502041D700A2200043156 /* DTJavaScriptCore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DTJavaScriptCore.h; sourceTree = "<group>"; };
@@ -57,6 +56,7 @@
 		F0B5024C1D700DE200043156 /* DTJSVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DTJSVirtualMachine.h; sourceTree = "<group>"; };
 		F0B5024D1D700DE200043156 /* DTJSVirtualMachine.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DTJSVirtualMachine.m; sourceTree = "<group>"; };
 		F0B502551D700E2F00043156 /* DTJSContextTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DTJSContextTests.m; sourceTree = "<group>"; };
+		F0B7181A1DD606D0003441F0 /* DTJSContextInternal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DTJSContextInternal.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,8 +139,8 @@
 				F0B5024B1D700DE200043156 /* DTJSValue.m */,
 				F0B5024C1D700DE200043156 /* DTJSVirtualMachine.h */,
 				F0B5024D1D700DE200043156 /* DTJSVirtualMachine.m */,
-				F03BBCE31D7235A0006558B5 /* DTJSValue+Internal.h */,
-				F03BBCE41D7235A0006558B5 /* DTJSValue+Internal.m */,
+				F03BBCE31D7235A0006558B5 /* DTJSValueInternal.h */,
+				F0B7181A1DD606D0003441F0 /* DTJSContextInternal.h */,
 			);
 			path = DTJSRuntime;
 			sourceTree = "<group>";
@@ -156,7 +156,8 @@
 				F0B5024E1D700DE200043156 /* DTJSContext.h in Headers */,
 				F0B502511D700DE200043156 /* DTJSValue.h in Headers */,
 				F0B502501D700DE200043156 /* DTJSDebug.h in Headers */,
-				F03BBCE51D7235A0006558B5 /* DTJSValue+Internal.h in Headers */,
+				F0B7181B1DD606D0003441F0 /* DTJSContextInternal.h in Headers */,
+				F03BBCE51D7235A0006558B5 /* DTJSValueInternal.h in Headers */,
 				F0B502531D700DE200043156 /* DTJSVirtualMachine.h in Headers */,
 				F0B502051D700A2200043156 /* DTJavaScriptCore.h in Headers */,
 				F0B502321D700A5300043156 /* duktape.h in Headers */,
@@ -261,7 +262,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				F0B502521D700DE200043156 /* DTJSValue.m in Sources */,
-				F03BBCE61D7235A0006558B5 /* DTJSValue+Internal.m in Sources */,
 				F0B5024F1D700DE200043156 /* DTJSContext.m in Sources */,
 				F0B502541D700DE200043156 /* DTJSVirtualMachine.m in Sources */,
 			);

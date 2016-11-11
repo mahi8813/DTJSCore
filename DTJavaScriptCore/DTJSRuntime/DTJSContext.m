@@ -9,9 +9,9 @@
 #import "DTJSContext.h"
 #import "DTJSVirtualMachine.h"
 #import "DTJSValue.h"
-#import "DTJSValue+Internal.h"
+#import "DTJSValueInternal.h"
 #import "DTJSDebug.h"
-#include "duktape.h"
+#import "duktape.h"
 
 
 @implementation DTJSContext
@@ -23,6 +23,9 @@
         if(self = [super init]){
             self.virtualMachine = [[[DTJSVirtualMachine alloc] init] autorelease];
             self.dukContext = [self.virtualMachine initialContext];
+            self.exceptionHandler = ^(DTJSContext *context, DTJSValue *exception){
+                context.exception = exception;
+            };
         }
         return self;
     }
@@ -37,6 +40,9 @@
             if(initialContext){
                 duk_idx_t thr_idx = duk_push_thread(initialContext);
                 self.dukContext = duk_require_context(initialContext, thr_idx);
+                self.exceptionHandler = ^(DTJSContext *context, DTJSValue *exception){
+                    context.exception = exception;
+                };
             }
         }
     }
@@ -133,6 +139,15 @@
 - (void)setObject:(id)object forKeyedSubscript:(NSObject <NSCopying> *)key{
     
     [self globalObject][key] = object;
+}
+
+@end
+
+@implementation DTJSContext (Internal)
+
+- (void)notifyExecption:(DTJSValue *)exception{
+
+    self.exceptionHandler(self, exception);
 }
 
 @end

@@ -7,7 +7,7 @@
 //
 
 #import <Foundation/Foundation.h>
-#include "duk_config.h"
+#import "duk_config.h"
 
 @class DTJSVirtualMachine;
 @class DTJSValue;
@@ -27,6 +27,8 @@
 - (DTJSValue *)evaluateScript:(NSString *)script  withSourceURL:(NSURL *)sourceURL;
 
 @property (readonly, retain) DTJSValue *globalObject;
+@property (nonatomic, strong) DTJSValue *exception;
+@property (nonatomic, copy) void(^exceptionHandler)(DTJSContext *context, DTJSValue *exception);
 
 @end
 

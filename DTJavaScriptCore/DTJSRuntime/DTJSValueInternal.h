@@ -1,12 +1,11 @@
 //
-//  DTJSValue+Internal.h
+//  DTJSValueInternal.h
 //  DTJavaScriptCore
 //
 //  Created by KH1128 on 28/08/16.
 //  Copyright © 2016 kony. All rights reserved.
 //
 
-#import "DTJSValue.h"
 #import "duk_config.h"
 
 typedef union Value{

@@ -7,7 +7,7 @@
 //
 
 #import <Foundation/Foundation.h>
-#include "duk_config.h"
+#import "duk_config.h"
 
 @interface DTJSVirtualMachine : NSObject
 

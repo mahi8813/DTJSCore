@@ -61,6 +61,14 @@ EXTERN_API(NSString *const JSPropertyDescriptorSetKey);
 - (DTJSValue *)valueAtIndex:(NSUInteger)index;
 - (void)setValue:(id)value atIndex:(NSUInteger)index;
 
+
+- (BOOL)isEqualToObject:(id)value;
+- (BOOL)isEqualWithTypeCoercionToObject:(id)value;
+- (BOOL)isInstanceOf:(id)value;
+- (DTJSValue *)callWithArguments:(NSArray *)arguments;
+- (DTJSValue *)constructWithArguments:(NSArray *)arguments;
+- (DTJSValue *)invokeMethod:(NSString *)method withArguments:(NSArray *)arguments;
+
 @end
 
 @interface DTJSValue (SubscriptSupport)

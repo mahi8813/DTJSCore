@@ -7,7 +7,7 @@
 //
 
 #import "DTJSVirtualMachine.h"
-#include "duktape.h"
+#import "duktape.h"
 
 @implementation DTJSVirtualMachine
 
