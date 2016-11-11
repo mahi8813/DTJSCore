@@ -595,20 +595,22 @@ DUK_C_FUNCTION(ObjectPropertySetter){
     DTJSValue *retVal = [DTJSValue valueWithUndefinedInContext:self.context];
     if([method isKindOfClass:[NSString class]]){
         duk_idx_t obj_idx = [self push];//[... obj]
-        [[DTJSValue valueWithString:method inContext:self.context] push];////[... obj key]
-        if([arguments isKindOfClass:[NSArray class]]){
-            for (id obj in arguments) {
-                DTJSValue *argJSValue = [DTJSValue valueWithObject:obj inContext:self.context];
-                [argJSValue push];
-            }//[... obj key func arg1 arg2 arg3 ...argN]
+        if(duk_is_function(self.context.dukContext, obj_idx)){
+            [[DTJSValue valueWithString:method inContext:self.context] push];////[... obj key]
+            if([arguments isKindOfClass:[NSArray class]]){
+                for (id obj in arguments) {
+                    DTJSValue *argJSValue = [DTJSValue valueWithObject:obj inContext:self.context];
+                    [argJSValue push];
+                }//[... obj key func arg1 arg2 arg3 ...argN]
+            }
+            duk_int_t rc = duk_pcall_prop(self.context.dukContext, obj_idx, (duk_idx_t)[arguments count]);//[... obj retVal/err]
+            retVal = [DTJSValue valueWithValAtStackTopInContext:self.context];
+            if (rc != DUK_EXEC_SUCCESS) {
+                DTJSValue *exception = retVal;
+                [self.context notifyExecption:exception];
+            }
+            [self pop2];//pops [... obj retVal/err]
         }
-        duk_int_t rc = duk_pcall_prop(self.context.dukContext, obj_idx, (duk_idx_t)[arguments count]);//[... obj retVal/err]
-        retVal = [DTJSValue valueWithValAtStackTopInContext:self.context];
-        if (rc != DUK_EXEC_SUCCESS) {
-            DTJSValue *exception = retVal;
-            [self.context notifyExecption:exception];
-        }
-        [self pop2];//pops [... obj retVal/err]
     }
     return retVal;
 }
