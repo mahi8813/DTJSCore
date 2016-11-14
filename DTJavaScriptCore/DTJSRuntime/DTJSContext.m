@@ -10,6 +10,7 @@
 #import "DTJSVirtualMachine.h"
 #import "DTJSValue.h"
 #import "DTJSValueInternal.h"
+#import "DTJSContextInternal.h"
 #import "DTJSDebug.h"
 #import "duktape.h"
 
@@ -25,6 +26,8 @@
             self.dukContext = [self.virtualMachine initialContext];
             self.exceptionHandler = ^(DTJSContext *context, DTJSValue *exception){
                 context.exception = exception;
+                [exception push];//[... err]
+                duk_throw(context.dukContext);//code will never returns
             };
         }
         return self;
@@ -67,8 +70,9 @@
         duk_push_string(self.dukContext, [script cStringUsingEncoding:NSUTF8StringEncoding]);//[src]
         if (duk_peval(self.dukContext) != 0) {//[... err]
             DTJSDebugLog(@"eval failed");
-            const char *error = duk_safe_to_string(self.dukContext, -1);
-            jsValue = [DTJSValue valueWithNewErrorFromMessage:[NSString stringWithUTF8String:error] inContext:self];
+            jsValue = [DTJSValue valueWithValAtStackTopInContext:self];
+            DTJSValue *exception = jsValue;
+            [self notifyExecption:exception];
         } else {//[... res]
             DTJSDebugLog(@"eval successful");
             jsValue = [DTJSValue valueWithValAtStackTopInContext:self];
@@ -85,8 +89,9 @@
         const char *filePath = [[fileURL path] cStringUsingEncoding:NSUTF8StringEncoding];
         if (duk_peval_file(self.dukContext, filePath) != 0) {//[... err]
             DTJSDebugLog(@"eval failed");
-            const char *error = duk_safe_to_string(self.dukContext, -1);
-            jsValue = [DTJSValue valueWithNewErrorFromMessage:[NSString stringWithUTF8String:error] inContext:self];
+            jsValue = [DTJSValue valueWithValAtStackTopInContext:self];
+            DTJSValue *exception = jsValue;
+            [self notifyExecption:exception];
         } else {//[... res]
             DTJSDebugLog(@"eval successful");
             jsValue = [DTJSValue valueWithValAtStackTopInContext:self];
@@ -106,8 +111,9 @@
             duk_push_string(self.dukContext, sourcePath);//[... src filename]
             if (duk_pcompile(self.dukContext, 0) != 0) {//[... func]
                 DTJSDebugLog(@"compile failed");
-                const char *error = duk_safe_to_string(self.dukContext, -1);
-                jsValue = [DTJSValue valueWithNewErrorFromMessage:[NSString stringWithUTF8String:error] inContext:self];
+                jsValue = [DTJSValue valueWithValAtStackTopInContext:self];
+                DTJSValue *exception = jsValue;
+                [self notifyExecption:exception];
             } else {
                 DTJSDebugLog(@"compile successful");
                 duk_call(self.dukContext, 0);//[... func ] -> [... result ]

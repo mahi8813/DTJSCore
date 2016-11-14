@@ -701,17 +701,6 @@ DUK_C_FUNCTION(ObjectPropertySetter){
     return jsValue;
 }
 
-+ (DTJSValue *)valueWithJSError:(void *)value inContext:(DTJSContext *)context{
-    
-    DTJSValue *jsValue = nil;
-    if(context){
-        jsValue  = [[DTJSValue alloc] initWithContext:context];
-        jsValue.isObject = true;
-        jsValue.value->objectValue = value;
-    }
-    return jsValue;
-}
-
 + (DTJSValue *)valueWithValAtStackIndex:(duk_idx_t)index inContext:(DTJSContext *)context{
     
     DTJSValue *jsValue = nil;
