@@ -31,8 +31,24 @@ DUK_C_FUNCTION(ObjectPropertySetter){
     return 0;
 }
 
-
 @interface DTJSValue ()
+
+typedef union Value{
+    double numberValue;
+    void *objectValue;
+}Value;
+
+@property (nonatomic, assign) Value *value;
+
+//redeclared to allow readwrite internally
+@property (readwrite) BOOL isUndefined;
+@property (readwrite) BOOL isNull;
+@property (readwrite) BOOL isBoolean;
+@property (readwrite) BOOL isNumber;
+@property (readwrite) BOOL isString;
+@property (readwrite) BOOL isObject;
+@property (readwrite) BOOL isArray;
+@property (readwrite) BOOL isDate;
 
 + (DTJSValue *)valueWithString:(NSString *)value inContext:(DTJSContext *)context;
 + (DTJSValue *)valueWithArray:(NSArray *)value inContext:(DTJSContext *)context;
@@ -47,8 +63,7 @@ DUK_C_FUNCTION(ObjectPropertySetter){
 - (instancetype)initWithContext:(DTJSContext *)context{
     
     if(self = [super init]){
-        self.value = calloc(1, sizeof(Value));
-        self.isUndefined = true;
+        self.value = (Value *)calloc(1, sizeof(Value));
         self.context = context;
     }
     return self;
@@ -122,7 +137,13 @@ DUK_C_FUNCTION(ObjectPropertySetter){
     DTJSValue *jsValue = nil;
     if(context){
         if(value){
-            if([value isKindOfClass:[NSString class]]){
+            if([value isKindOfClass:[NSNull class]]){
+                jsValue = [DTJSValue valueWithNullInContext:context];
+            }
+            else if ([value isKindOfClass:[NSNumber class]]){
+                jsValue = [DTJSValue valueWithDouble:[value doubleValue] inContext:context];
+            }
+            else if([value isKindOfClass:[NSString class]]){
                 jsValue = [DTJSValue valueWithString:value inContext:context];
             }
             else if([value isKindOfClass:[NSArray class]]){
@@ -131,12 +152,9 @@ DUK_C_FUNCTION(ObjectPropertySetter){
             else if([value isKindOfClass:[NSDictionary class]]){
                 jsValue = [DTJSValue valueWithDictionary:value inContext:context];
             }
-            else if ([value isKindOfClass:[NSNumber class]]){
-                jsValue = [DTJSValue valueWithDouble:[value doubleValue] inContext:context];
-            }
-            else if ([value isKindOfClass:[NSObject class]]){
-                jsValue  = [DTJSValue valueWithNewObjectInContext:context];
-                jsValue[@"class"] = NSStringFromClass([value class]);
+            else if ([value isKindOfClass:[NSDate class]]){
+                // date object apis are not exposed in duktape.
+                // however built in date object support is available.
             }
         }
         else{
@@ -655,16 +673,6 @@ DUK_C_FUNCTION(ObjectPropertySetter){
 
 
 @implementation DTJSValue (Internal)
-
-@dynamic value;
-@dynamic isUndefined;
-@dynamic isNull;
-@dynamic isBoolean;
-@dynamic isNumber;
-@dynamic isString;
-@dynamic isObject;
-@dynamic isArray;
-@dynamic isDate;
 
 #pragma mark - convienence intializaters for JS objects
 

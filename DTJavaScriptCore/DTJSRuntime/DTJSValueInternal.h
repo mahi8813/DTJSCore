@@ -8,24 +8,7 @@
 
 #import "duk_config.h"
 
-typedef union Value{
-    double numberValue;
-    void *objectValue;
-}Value;
-
 @interface DTJSValue (Internal)
-
-@property (nonatomic, assign) Value *value;
-
-//redeclared to allow readwrite internally
-@property (readwrite) BOOL isUndefined;
-@property (readwrite) BOOL isNull;
-@property (readwrite) BOOL isBoolean;
-@property (readwrite) BOOL isNumber;
-@property (readwrite) BOOL isString;
-@property (readwrite) BOOL isObject;
-@property (readwrite) BOOL isArray;
-@property (readwrite) BOOL isDate;
 
 + (DTJSValue *)valueWithJSString:(const char *) string inContext:(DTJSContext *)context;
 + (DTJSValue *)valueWithJSArray:(void *)array inContext:(DTJSContext *)context;

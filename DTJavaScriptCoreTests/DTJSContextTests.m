@@ -7,8 +7,7 @@
 //
 
 #import <XCTest/XCTest.h>
-#import "DTJSContext.h"
-#import "DTJSValue.h"
+#import "DTJavaScriptCore.h"
 
 
 @interface DTJSContextTests : XCTestCase

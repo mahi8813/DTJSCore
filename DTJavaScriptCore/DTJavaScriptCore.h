@@ -15,3 +15,4 @@ FOUNDATION_EXPORT double DTJavaScriptCoreVersionNumber;
 FOUNDATION_EXPORT const unsigned char DTJavaScriptCoreVersionString[];
 
 #import <DTJavaScriptCore/DTJSValue.h>
+#import <DTJavaScriptCore/DTJSContext.h>

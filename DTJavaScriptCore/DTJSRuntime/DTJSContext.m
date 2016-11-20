@@ -14,7 +14,6 @@
 #import "DTJSDebug.h"
 #import "duktape.h"
 
-
 @implementation DTJSContext
 
 #pragma mark - intializers
@@ -158,3 +157,7 @@
 
 @end
 
+@implementation DTJSContext (JSExport)
+
+
+@end
