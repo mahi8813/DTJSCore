@@ -10,9 +10,9 @@
 #import "DTJSValueInternal.h"
 #import "DTJSContext.h"
 #import "DTJSContextInternal.h"
+#import "DTJSExport.h"
 #import "duktape.h"
-
-#define DUK_C_FUNCTION(funcName) duk_ret_t funcName(duk_context *ctx)
+#import <objc/runtime.h>
 
 NSString *const JSPropertyDescriptorWritableKey = @"writable";
 NSString *const JSPropertyDescriptorEnumerableKey = @"enumerable";
@@ -21,12 +21,12 @@ NSString *const JSPropertyDescriptorValueKey = @"value";
 NSString *const JSPropertyDescriptorGetKey  = @"get";
 NSString *const JSPropertyDescriptorSetKey = @"set";
 
-DUK_C_FUNCTION(ObjectPropertyGetter){
+DUK_CALLBACK(ObjectPropertyGetter){
     
     return 0;
 }
 
-DUK_C_FUNCTION(ObjectPropertySetter){
+DUK_CALLBACK(ObjectPropertySetter){
     
     return 0;
 }
@@ -49,6 +49,7 @@ typedef union Value{
 @property (readwrite) BOOL isObject;
 @property (readwrite) BOOL isArray;
 @property (readwrite) BOOL isDate;
+@property (readwrite) BOOL isFunction;
 
 + (DTJSValue *)valueWithString:(NSString *)value inContext:(DTJSContext *)context;
 + (DTJSValue *)valueWithArray:(NSArray *)value inContext:(DTJSContext *)context;
@@ -155,6 +156,9 @@ typedef union Value{
             else if ([value isKindOfClass:[NSDate class]]){
                 // date object apis are not exposed in duktape.
                 // however built in date object support is available.
+            }
+            else if([value isKindOfClass:[DTJSValue class]]){
+                jsValue = value;
             }
         }
         else{
@@ -709,6 +713,40 @@ typedef union Value{
     return jsValue;
 }
 
++ (DTJSValue *)valueWithJSFunction:(void *)value inContext:(DTJSContext *)context{
+    
+    DTJSValue *jsValue = nil;
+    if(context){
+        jsValue  = [[DTJSValue alloc] initWithContext:context];
+        jsValue.isFunction = true;
+        jsValue.value->objectValue = value;
+    }
+    return jsValue;
+}
+
++ (DTJSValue *)valueWithObjcClass:(Class)cls inContext:(DTJSContext *)context{
+    
+    DTJSValue *jsValue = nil;
+    if(context){
+        jsValue = [DTJSValue valueWithNewFunctionWithAssociatedDukCallback:JSObjectConstructorCallback inContext:context];
+        [DTJSExport exportClass:cls toJSValue:jsValue inContext:context];
+    }
+    return jsValue;
+}
+
++ (DTJSValue *)valueWithNewFunctionWithAssociatedDukCallback:(DukCallback)aDukCallback inContext:(DTJSContext *)context{
+    
+    DTJSValue *jsValue = nil;
+    if(context){
+        jsValue = [[DTJSValue alloc] initWithContext:context];
+        jsValue.isFunction = true;
+        duk_idx_t obj_idx =  duk_push_c_function(context.dukContext, aDukCallback, 0);//[... obj]
+        jsValue.value->objectValue = duk_require_heapptr(context.dukContext, obj_idx);
+        duk_pop(context.dukContext);//pops [... obj]
+    }
+    return jsValue;
+}
+
 + (DTJSValue *)valueWithValAtStackIndex:(duk_idx_t)index inContext:(DTJSContext *)context{
     
     DTJSValue *jsValue = nil;
@@ -748,6 +786,9 @@ typedef union Value{
                 if(duk_is_array(context.dukContext, index)){
                     jsValue = [DTJSValue valueWithJSArray:value inContext:context];
                 }
+                else if (duk_is_function(context.dukContext, index)){
+                    jsValue = [DTJSValue valueWithJSFunction:value inContext:context];
+                }
                 else{
                     jsValue = [DTJSValue valueWithJSObject:value inContext:context];
                 }
@@ -786,7 +827,8 @@ typedef union Value{
         duk_push_string(self.context.dukContext, (const char *)self.value->objectValue);
     }
     else if(self.isArray ||
-            self.isObject){
+            self.isObject ||
+            self.isFunction){
         duk_push_heapptr(self.context.dukContext, self.value->objectValue);
     }
     return duk_require_top_index(self.context.dukContext);
