@@ -23,5 +23,5 @@ DUK_CALLBACK(JSObjectConstructorCallback);
 @interface NSString (JSMethod)
 
 + (NSString *)jsMethodStringWithSelector:(SEL)aSelector;
-    
+
 @end

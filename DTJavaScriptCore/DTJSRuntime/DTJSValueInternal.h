@@ -26,5 +26,5 @@ typedef duk_c_function DukCallback;
 - (duk_idx_t)push;
 - (void)pop;
 - (void)pop2;
-
+- (void *)objectValue;
 @end

@@ -844,4 +844,16 @@ typedef union Value{
     duk_pop_2(self.context.dukContext);
 }
 
+- (void *)objectValue{
+    
+    if(self.isString ||
+       self.isArray ||
+       self.isObject ||
+       self.isFunction){
+        if(self.value){
+            return self.value->objectValue;
+        }
+    }
+    return nil;
+}
 @end

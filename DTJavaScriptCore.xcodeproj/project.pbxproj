@@ -7,10 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F039782A1DF1F99600001C50 /* DTJSExportTests.m in Sources */ = {isa = PBXBuildFile; fileRef = F03978291DF1F99600001C50 /* DTJSExportTests.m */; };
 		F03BBCE51D7235A0006558B5 /* DTJSValueInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = F03BBCE31D7235A0006558B5 /* DTJSValueInternal.h */; };
 		F0A7D9951D70C08A004FF294 /* JSSources in Resources */ = {isa = PBXBuildFile; fileRef = F0A7D9941D70C08A004FF294 /* JSSources */; };
 		F0AD8BBE1DE21315004AF394 /* DTJSContext.m in Sources */ = {isa = PBXBuildFile; fileRef = F0AD8BBD1DE21315004AF394 /* DTJSContext.m */; };
-		F0AD8BC21DE21371004AF394 /* DTJSContext.h in Headers */ = {isa = PBXBuildFile; fileRef = F0AD8BC11DE21371004AF394 /* DTJSContext.h */; };
+		F0AD8BC21DE21371004AF394 /* DTJSContext.h in Headers */ = {isa = PBXBuildFile; fileRef = F0AD8BC11DE21371004AF394 /* DTJSContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		F0AD8BC51DE213FA004AF394 /* DTJSExport.h in Headers */ = {isa = PBXBuildFile; fileRef = F0AD8BC31DE213FA004AF394 /* DTJSExport.h */; };
 		F0AD8BC61DE213FA004AF394 /* DTJSExport.m in Sources */ = {isa = PBXBuildFile; fileRef = F0AD8BC41DE213FA004AF394 /* DTJSExport.m */; };
 		F0B502051D700A2200043156 /* DTJavaScriptCore.h in Headers */ = {isa = PBXBuildFile; fileRef = F0B502041D700A2200043156 /* DTJavaScriptCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -39,12 +40,13 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		F03978291DF1F99600001C50 /* DTJSExportTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DTJSExportTests.m; sourceTree = "<group>"; };
 		F03BBCE31D7235A0006558B5 /* DTJSValueInternal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DTJSValueInternal.h; sourceTree = "<group>"; };
 		F0A7D9941D70C08A004FF294 /* JSSources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = JSSources; sourceTree = "<group>"; };
 		F0AD8BBD1DE21315004AF394 /* DTJSContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DTJSContext.m; sourceTree = "<group>"; };
 		F0AD8BC11DE21371004AF394 /* DTJSContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DTJSContext.h; sourceTree = "<group>"; };
 		F0AD8BC31DE213FA004AF394 /* DTJSExport.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DTJSExport.h; sourceTree = "<group>"; };
-		F0AD8BC41DE213FA004AF394 /* DTJSExport.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DTJSExport.m; sourceTree = "<group>"; };
+		F0AD8BC41DE213FA004AF394 /* DTJSExport.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.objc; fileEncoding = 4; path = DTJSExport.m; sourceTree = "<group>"; };
 		F0B502011D700A2200043156 /* DTJavaScriptCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = DTJavaScriptCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0B502041D700A2200043156 /* DTJavaScriptCore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DTJavaScriptCore.h; sourceTree = "<group>"; };
 		F0B502061D700A2200043156 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -115,6 +117,7 @@
 		F0B5020F1D700A2200043156 /* DTJavaScriptCoreTests */ = {
 			isa = PBXGroup;
 			children = (
+				F03978291DF1F99600001C50 /* DTJSExportTests.m */,
 				F0A7D9941D70C08A004FF294 /* JSSources */,
 				F0B502101D700A2200043156 /* DTJavaScriptCoreTests.m */,
 				F0B502121D700A2200043156 /* Info.plist */,
@@ -279,6 +282,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F039782A1DF1F99600001C50 /* DTJSExportTests.m in Sources */,
 				F0B502561D700E2F00043156 /* DTJSContextTests.m in Sources */,
 				F0B502111D700A2200043156 /* DTJavaScriptCoreTests.m in Sources */,
 			);
