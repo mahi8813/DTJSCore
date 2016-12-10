@@ -16,7 +16,7 @@ DUK_CALLBACK(JSObjectConstructorCallback);
 
 @interface DTJSExport : NSObject
 
-+ (void)exportClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context;
++ (DTJSValue *)exportClass:(Class)cls inContext:(DTJSContext *)context;
 
 @end
 

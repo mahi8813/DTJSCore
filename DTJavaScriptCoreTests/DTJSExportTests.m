@@ -9,6 +9,7 @@
 #import <XCTest/XCTest.h>
 #import <Objc/runtime.h>
 #import "DTJSExport.h"
+#import "DTJSContext.h"
 
 @interface DTJSExportTests : XCTestCase
 
@@ -84,7 +85,20 @@
     
     NSString *jsName6 = [NSString jsMethodStringWithSelector:sel6];
     XCTAssertEqualObjects(jsName6, @"URLSessionTaskDidCompleteWithError");
+}
+
+- (void)testExportClassToJSValueInContext{
     
+    DTJSContext *context = [[DTJSContext alloc] init];
+    context[NSStringFromClass([NSArray class])] = [NSArray class];
     
+    [context evaluateScript:@"var desc = \"A new NSArray Object will be created\";  \
+                              print(desc); \
+                              var nsarray = new NSArray(); \
+                              var count = nsarray.count(); \
+                              print(\"created Object\" + nsarray); \
+                              NSArray.arrayWithObject(); \
+                              1;"];
+
 }
 @end

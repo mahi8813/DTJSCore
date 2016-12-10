@@ -11,13 +11,17 @@
 #import "duktape.h"
 #import <objc/runtime.h>
 
-
 DUK_CALLBACK(JSObjectConstructorCallback){
     
     return 0;
 }
 
-DUK_CALLBACK(JSObjectMethodCallback){
+DUK_CALLBACK(JSObjectClassMethodCallback){
+    
+    return 0;
+}
+
+DUK_CALLBACK(JSObjectInstanceMethodCallback){
     
     return 0;
 }
@@ -26,6 +30,7 @@ DUK_CALLBACK(JSObjectMethodCallback){
 
 @property (class) NSMutableDictionary *classMethodMap;
 @property (class) NSMutableDictionary *instanceMethodMap;
+@property (class) NSMutableDictionary *classMap;
 
 + (void)exportClassMethodsFromClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context;
 + (void)exportInstanceMethodsFromClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context;
@@ -37,6 +42,7 @@ DUK_CALLBACK(JSObjectMethodCallback){
 
 static NSMutableDictionary *_classMethodMap;
 static NSMutableDictionary *_instanceMethodMap;
+static NSMutableDictionary *_classMap;
 
 + (NSMutableDictionary *)classMethodMap{
     if(!_classMethodMap){
@@ -80,15 +86,57 @@ static NSMutableDictionary *_instanceMethodMap;
     }
 }
 
-+ (void)exportClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context{
++ (NSMutableDictionary *)classMap{
+    if(!_classMap){
+        //ensure that dictionary is created only once
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            _classMap = [[NSMutableDictionary dictionary] retain];
+        });
+    }
+    return _classMap;
+}
+
++ (void)setClassMap:(NSMutableDictionary *)classMap{
     
-    if(jsValue && context && cls){
+    if(_classMap){
+        [_classMap release]; _classMap = nil;
+    }
+    if(classMap){
+        _classMap = [classMap retain];
+    }
+}
+
++ (DTJSValue *)exportClass:(Class)cls inContext:(DTJSContext *)context{
+   
+    DTJSValue *jsValue = nil;
+    if(context && cls){
         if(object_isClass(cls)){
-            [DTJSExport exportClassMethodsFromClass:cls toJSValue:jsValue inContext:context];
-            [DTJSExport exportInstanceMethodsFromClass:cls toJSValue:jsValue inContext:context];
-            [DTJSExport exportPropertiesFromClass:cls toJSValue:jsValue inContext:context];
+            if(self.classMap){
+               jsValue = [self.classMap objectForKey:NSStringFromClass(cls)];
+            }
+            if(!jsValue){
+                
+                //create jsObject for the class
+                jsValue = [DTJSValue valueWithNewFunctionWithAssociatedDukCallback:JSObjectConstructorCallback inContext:context];
+                
+                //export class methods to jsObject
+                [DTJSExport exportClassMethodsFromClass:cls toJSValue:jsValue inContext:context];
+                
+                //add a prototype object to the jsObject
+                jsValue[@"prototype"] = [DTJSValue valueWithNewObjectInContext:context];
+                
+                //export instance methods & properties to prototype object
+                [DTJSExport exportInstanceMethodsFromClass:cls toJSValue:jsValue[@"prototype"] inContext:context];
+                [DTJSExport exportPropertiesFromClass:cls toJSValue:jsValue[@"prototype"] inContext:context];
+                
+                //store jsValue on classMap
+                [self.classMap setObject:jsValue forKey:NSStringFromClass(cls)];
+                
+            }
         }
     }
+    return jsValue;
 }
 
 + (void)exportClassMethodsFromClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context{
@@ -105,13 +153,13 @@ static NSMutableDictionary *_instanceMethodMap;
             for (int i = 0; i < mtdCount; i++) {
                 sel = method_getName(mtdList[i]);
                 mtdJSName = [NSString jsMethodStringWithSelector:sel];
-                mtdJSValue = [DTJSValue valueWithNewFunctionWithAssociatedDukCallback:JSObjectMethodCallback inContext:context];
+                mtdJSValue = [DTJSValue valueWithNewFunctionWithAssociatedDukCallback:JSObjectClassMethodCallback inContext:context];
                 jsValue[mtdJSName] = mtdJSValue;
                 
                 // store the duk func obj and objC method selector as key-value pairs
                 // key = duk func obj
                 // val = objC method selector
-                key = [NSValue valueWithPointer:[mtdJSValue objectValue]];
+                key = [NSValue valueWithPointer:mtdJSValue];
                 value = [NSValue valueWithPointer:sel];
                 [self.classMethodMap setObject:value forKey:key];
             }
@@ -133,7 +181,9 @@ static NSMutableDictionary *_instanceMethodMap;
             for (int i = 0; i < mtdCount; i++) {
                 sel = method_getName(mtdList[i]);
                 mtdJSName = [NSString jsMethodStringWithSelector:sel];
-                mtdJSValue = [DTJSValue valueWithNewFunctionWithAssociatedDukCallback:JSObjectMethodCallback inContext:context];
+                mtdJSValue = [DTJSValue valueWithNewFunctionWithAssociatedDukCallback:JSObjectInstanceMethodCallback inContext:context];
+                
+                
                 jsValue[mtdJSName] = mtdJSValue;
                 
                 // store the duk func obj and objC method selector as key-value pairs

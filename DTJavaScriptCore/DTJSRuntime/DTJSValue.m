@@ -95,6 +95,7 @@ typedef union Value{
             jsValue = [[DTJSValue alloc] initWithContext:context];
             jsValue.isString = true;
             jsValue.value->objectValue = (void *)duk_push_string(context.dukContext, [value cStringUsingEncoding:NSUTF8StringEncoding]);
+            [jsValue retainValue];
             duk_pop(context.dukContext);//pops string
         }
     }
@@ -138,7 +139,13 @@ typedef union Value{
     DTJSValue *jsValue = nil;
     if(context){
         if(value){
-            if([value isKindOfClass:[NSNull class]]){
+            if(object_isClass(value)){
+                jsValue = [DTJSValue valueWithObjcClass:value inContext:context];
+            }
+            else if([value isKindOfClass:[DTJSValue class]]){
+                jsValue = value;
+            }
+            else if([value isKindOfClass:[NSNull class]]){
                 jsValue = [DTJSValue valueWithNullInContext:context];
             }
             else if ([value isKindOfClass:[NSNumber class]]){
@@ -156,9 +163,6 @@ typedef union Value{
             else if ([value isKindOfClass:[NSDate class]]){
                 // date object apis are not exposed in duktape.
                 // however built in date object support is available.
-            }
-            else if([value isKindOfClass:[DTJSValue class]]){
-                jsValue = value;
             }
         }
         else{
@@ -208,6 +212,7 @@ typedef union Value{
         jsValue.isObject = true;
         duk_idx_t obj_idx = duk_push_object(context.dukContext);//[... obj]
         jsValue.value->objectValue = duk_require_heapptr(context.dukContext, obj_idx);
+        [jsValue retainValue];
         duk_pop(context.dukContext);//pops [... obj]
     }
     return jsValue;
@@ -221,6 +226,7 @@ typedef union Value{
         jsValue.isArray = true;
         duk_idx_t arr_idx = duk_push_array(context.dukContext);//[... arr]
         jsValue.value->objectValue = duk_require_heapptr(context.dukContext, arr_idx);
+        [jsValue retainValue];
         duk_pop(context.dukContext);//pops [... arr]
     }
     return jsValue;
@@ -234,6 +240,7 @@ typedef union Value{
         jsValue.isObject = true;
         duk_idx_t err_idx =  duk_push_error_object(context.dukContext, DUK_ERR_ERROR, [message cStringUsingEncoding:NSUTF8StringEncoding]);//[... err]
         jsValue.value->objectValue = duk_require_heapptr(context.dukContext, err_idx);
+        [jsValue retainValue];
         duk_pop(context.dukContext);//pops [... err]
     }
     return jsValue;
@@ -687,6 +694,7 @@ typedef union Value{
         jsValue = [[DTJSValue alloc] initWithContext:context];
         jsValue.isString = true;
         jsValue.value->objectValue = (void *)string;
+        [jsValue retainValue];
     }
     return jsValue;
 }
@@ -698,6 +706,7 @@ typedef union Value{
         jsValue = [[DTJSValue alloc] initWithContext:context];
         jsValue.isArray = true;
         jsValue.value->objectValue = array;
+        [jsValue retainValue];
     }
     return jsValue;
 }
@@ -709,6 +718,7 @@ typedef union Value{
         jsValue  = [[DTJSValue alloc] initWithContext:context];
         jsValue.isObject = true;
         jsValue.value->objectValue = value;
+        [jsValue retainValue];
     }
     return jsValue;
 }
@@ -720,6 +730,7 @@ typedef union Value{
         jsValue  = [[DTJSValue alloc] initWithContext:context];
         jsValue.isFunction = true;
         jsValue.value->objectValue = value;
+        [jsValue retainValue];
     }
     return jsValue;
 }
@@ -728,8 +739,7 @@ typedef union Value{
     
     DTJSValue *jsValue = nil;
     if(context){
-        jsValue = [DTJSValue valueWithNewFunctionWithAssociatedDukCallback:JSObjectConstructorCallback inContext:context];
-        [DTJSExport exportClass:cls toJSValue:jsValue inContext:context];
+        jsValue = [DTJSExport exportClass:cls inContext:context];
     }
     return jsValue;
 }
@@ -740,8 +750,9 @@ typedef union Value{
     if(context){
         jsValue = [[DTJSValue alloc] initWithContext:context];
         jsValue.isFunction = true;
-        duk_idx_t obj_idx =  duk_push_c_function(context.dukContext, aDukCallback, 0);//[... obj]
+        duk_idx_t obj_idx =  duk_push_c_function(context.dukContext, aDukCallback, DUK_VARARGS);//[... obj]
         jsValue.value->objectValue = duk_require_heapptr(context.dukContext, obj_idx);
+        [jsValue retainValue];
         duk_pop(context.dukContext);//pops [... obj]
     }
     return jsValue;
@@ -844,6 +855,8 @@ typedef union Value{
     duk_pop_2(self.context.dukContext);
 }
 
+#pragma mark - DTJSValue util methods
+
 - (void *)objectValue{
     
     if(self.isString ||
@@ -856,4 +869,32 @@ typedef union Value{
     }
     return nil;
 }
+
+- (void)retainValue{
+   
+    if(self.isString ||
+       self.isArray ||
+       self.isObject ||
+       self.isFunction){
+        duk_push_global_stash(self.context.dukContext);//[... gblStash]
+        duk_bool_t success = duk_get_prop_string(self.context.dukContext, -1, "retainArray");//[... gblStash, arr/unf]
+        if(!success){
+            duk_pop(self.context.dukContext);//pops unf
+            duk_push_array(self.context.dukContext);//[... gblStash, arr]
+            duk_put_prop_string(self.context.dukContext, -2, "retainArray");//[... gblStash]
+            duk_get_prop_string(self.context.dukContext, -1, "retainArray");//[... gblStash, arr]
+        }
+        
+        //get length of the retainArray
+        duk_get_prop_string(self.context.dukContext, -1, "length");//[... gblStash, arr, len]
+        int retArrlen = duk_require_int(self.context.dukContext, -1);
+        duk_pop(self.context.dukContext);//pops len [... gblStash, arr]
+        
+        //push jsValue in the array
+        duk_push_heapptr(self.context.dukContext, self.objectValue);//[... gblStash, arr, val]
+        duk_put_prop_index(self.context.dukContext, -2, retArrlen);//[... gblStash, arr]
+        duk_pop_2(self.context.dukContext);//pops [... gblStash, arr]
+    }
+}
+
 @end
