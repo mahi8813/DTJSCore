@@ -21,16 +21,6 @@ NSString *const JSPropertyDescriptorValueKey = @"value";
 NSString *const JSPropertyDescriptorGetKey  = @"get";
 NSString *const JSPropertyDescriptorSetKey = @"set";
 
-DUK_CALLBACK(ObjectPropertyGetter){
-    
-    return 0;
-}
-
-DUK_CALLBACK(ObjectPropertySetter){
-    
-    return 0;
-}
-
 @interface DTJSValue ()
 
 typedef union Value{
@@ -481,15 +471,11 @@ typedef union Value{
             }
             else if (isAccessorDescriptor){ //Accessor Descriptor
                 if(get){
-                    duk_idx_t func_idx =  duk_push_c_function(self.context.dukContext, ObjectPropertyGetter, 0);//[... obj key getter]
-                    duk_push_pointer(self.context.dukContext, (void *)get);
-                    duk_put_prop_string(self.context.dukContext, func_idx, "getter");
+                    duk_idx_t func_idx =  duk_push_c_function(self.context.dukContext, (DukCallback)get, 0);//[... obj key getter]
                     flags |= DUK_DEFPROP_HAVE_GETTER;
                 }
                 if(set){
-                    duk_idx_t func_idx =  duk_push_c_function(self.context.dukContext, ObjectPropertySetter, 1);//[... obj key getter setter]
-                    duk_push_pointer(self.context.dukContext, (void *)set);
-                    duk_put_prop_string(self.context.dukContext, func_idx, "setter");
+                    duk_idx_t func_idx =  duk_push_c_function(self.context.dukContext, (DukCallback)set, 1);//[... obj key getter setter]
                     flags |= DUK_DEFPROP_HAVE_SETTER;
                 }
             }
@@ -744,13 +730,13 @@ typedef union Value{
     return jsValue;
 }
 
-+ (DTJSValue *)valueWithNewFunctionWithAssociatedDukCallback:(DukCallback)aDukCallback inContext:(DTJSContext *)context{
++ (DTJSValue *)valueWithNewFunctionInContext:(DTJSContext *)context withCallback:(DukCallback)aCallback noOfArgs:(NSInteger)nargs {
     
     DTJSValue *jsValue = nil;
     if(context){
         jsValue = [[DTJSValue alloc] initWithContext:context];
         jsValue.isFunction = true;
-        duk_idx_t obj_idx =  duk_push_c_function(context.dukContext, aDukCallback, DUK_VARARGS);//[... obj]
+        duk_idx_t obj_idx =  duk_push_c_function(context.dukContext, aCallback, (duk_idx_t)nargs);//[... obj]
         jsValue.value->objectValue = duk_require_heapptr(context.dukContext, obj_idx);
         [jsValue retainValue];
         duk_pop(context.dukContext);//pops [... obj]
@@ -871,7 +857,7 @@ typedef union Value{
 }
 
 - (void)retainValue{
-   
+    
     if(self.isString ||
        self.isArray ||
        self.isObject ||
@@ -885,15 +871,14 @@ typedef union Value{
             duk_get_prop_string(self.context.dukContext, -1, "retainArray");//[... gblStash, arr]
         }
         
-        //get length of the retainArray
-        duk_get_prop_string(self.context.dukContext, -1, "length");//[... gblStash, arr, len]
-        int retArrlen = duk_require_int(self.context.dukContext, -1);
-        duk_pop(self.context.dukContext);//pops len [... gblStash, arr]
-        
-        //push jsValue in the array
-        duk_push_heapptr(self.context.dukContext, self.objectValue);//[... gblStash, arr, val]
-        duk_put_prop_index(self.context.dukContext, -2, retArrlen);//[... gblStash, arr]
-        duk_pop_2(self.context.dukContext);//pops [... gblStash, arr]
+        if(duk_is_array(self.context.dukContext, -1)){
+            //get length of the retainArray
+            duk_size_t retArrlen = duk_get_length(self.context.dukContext, -1);
+            //push jsValue in the array
+            duk_push_heapptr(self.context.dukContext, self.objectValue);//[... gblStash, arr, val]
+            duk_put_prop_index(self.context.dukContext, -2, (duk_uarridx_t)retArrlen);//[... gblStash, arr]
+            duk_pop_2(self.context.dukContext);//pops [... gblStash, arr]
+        }
     }
 }
 

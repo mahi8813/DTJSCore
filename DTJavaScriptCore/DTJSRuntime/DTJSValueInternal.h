@@ -19,7 +19,7 @@ typedef duk_c_function DukCallback;
 + (DTJSValue *)valueWithJSArray:(void *)array inContext:(DTJSContext *)context;
 + (DTJSValue *)valueWithJSObject:(void *)object inContext:(DTJSContext *)context;
 + (DTJSValue *)valueWithObjcClass:(Class)cls inContext:(DTJSContext *)context;
-+ (DTJSValue *)valueWithNewFunctionWithAssociatedDukCallback:(DukCallback)aDukCallback inContext:(DTJSContext *)context;
++ (DTJSValue *)valueWithNewFunctionInContext:(DTJSContext *)context withCallback:(DukCallback)aCallback noOfArgs:(NSInteger)nargs;
 + (DTJSValue *)valueWithValAtStackIndex:(duk_idx_t)index inContext:(DTJSContext *)context;
 + (DTJSValue *)valueWithValAtStackTopInContext:(DTJSContext *)context;
 
