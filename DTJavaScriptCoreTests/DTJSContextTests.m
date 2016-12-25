@@ -44,4 +44,17 @@
     XCTAssertEqual([result toDouble], 85);
 }
 
+- (void)testEvaluateScriptWithSourceURL{
+    
+    NSBundle *testBundle = [NSBundle bundleForClass:[self class]];
+    NSString *filePath = [testBundle pathForResource:@"adder" ofType:@"js" inDirectory:@"JSSources"];
+    NSURL *fileURL = [NSURL fileURLWithPath:filePath];
+    DTJSContext *jsCtx = [[DTJSContext alloc] init];
+    DTJSValue *result = [jsCtx evaluateScript:[NSString stringWithContentsOfURL:fileURL encoding:NSUTF8StringEncoding error:nil]
+                                withSourceURL:fileURL];
+    XCTAssertEqual([result toDouble], 85);
+}
+
+
+
 @end

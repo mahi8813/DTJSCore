@@ -40,6 +40,7 @@ EXTERN_API(NSString *const JSPropertyDescriptorSetKey);
 @property (readonly) BOOL isObject;
 @property (readonly) BOOL isArray;
 @property (readonly) BOOL isDate;
+@property (readonly) BOOL isFunction;
 
 - (id)toObject;
 - (id)toObjectOfClass:(Class)expectedClass;
