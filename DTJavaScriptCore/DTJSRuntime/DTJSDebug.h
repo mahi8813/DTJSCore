@@ -9,8 +9,7 @@
 #ifndef DTJSDebug_h
 #define DTJSDebug_h
 
-#define DEBUGINFO 1
-#if DEBUGINFO
+#if DEBUG
 #define DTJSDebugLog(fmt, ...) NSLog((@"%s [line no: %d] " fmt), __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
 #else
 #define DTJSDebugLog(...)

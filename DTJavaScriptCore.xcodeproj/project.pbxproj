@@ -7,13 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F038FE561E0CC500000242DE /* DTJSConstants.h in Headers */ = {isa = PBXBuildFile; fileRef = F038FE551E0CC4EC000242DE /* DTJSConstants.h */; };
 		F039782A1DF1F99600001C50 /* DTJSExportTests.m in Sources */ = {isa = PBXBuildFile; fileRef = F03978291DF1F99600001C50 /* DTJSExportTests.m */; };
 		F03BBCE51D7235A0006558B5 /* DTJSValueInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = F03BBCE31D7235A0006558B5 /* DTJSValueInternal.h */; };
 		F0A7D9951D70C08A004FF294 /* JSSources in Resources */ = {isa = PBXBuildFile; fileRef = F0A7D9941D70C08A004FF294 /* JSSources */; };
 		F0AD8BBE1DE21315004AF394 /* DTJSContext.m in Sources */ = {isa = PBXBuildFile; fileRef = F0AD8BBD1DE21315004AF394 /* DTJSContext.m */; };
 		F0AD8BC21DE21371004AF394 /* DTJSContext.h in Headers */ = {isa = PBXBuildFile; fileRef = F0AD8BC11DE21371004AF394 /* DTJSContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		F0AD8BC51DE213FA004AF394 /* DTJSExport.h in Headers */ = {isa = PBXBuildFile; fileRef = F0AD8BC31DE213FA004AF394 /* DTJSExport.h */; };
-		F0AD8BC61DE213FA004AF394 /* DTJSExport.m in Sources */ = {isa = PBXBuildFile; fileRef = F0AD8BC41DE213FA004AF394 /* DTJSExport.m */; };
+		F0AD8BC51DE213FA004AF394 /* DTJSExporter.h in Headers */ = {isa = PBXBuildFile; fileRef = F0AD8BC31DE213FA004AF394 /* DTJSExporter.h */; };
+		F0AD8BC61DE213FA004AF394 /* DTJSExporter.m in Sources */ = {isa = PBXBuildFile; fileRef = F0AD8BC41DE213FA004AF394 /* DTJSExporter.m */; };
 		F0B502051D700A2200043156 /* DTJavaScriptCore.h in Headers */ = {isa = PBXBuildFile; fileRef = F0B502041D700A2200043156 /* DTJavaScriptCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		F0B5020C1D700A2200043156 /* DTJavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F0B502011D700A2200043156 /* DTJavaScriptCore.framework */; };
 		F0B502111D700A2200043156 /* DTJavaScriptCoreTests.m in Sources */ = {isa = PBXBuildFile; fileRef = F0B502101D700A2200043156 /* DTJavaScriptCoreTests.m */; };
@@ -40,13 +41,14 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		F038FE551E0CC4EC000242DE /* DTJSConstants.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DTJSConstants.h; sourceTree = "<group>"; };
 		F03978291DF1F99600001C50 /* DTJSExportTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DTJSExportTests.m; sourceTree = "<group>"; };
 		F03BBCE31D7235A0006558B5 /* DTJSValueInternal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DTJSValueInternal.h; sourceTree = "<group>"; };
 		F0A7D9941D70C08A004FF294 /* JSSources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = JSSources; sourceTree = "<group>"; };
 		F0AD8BBD1DE21315004AF394 /* DTJSContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DTJSContext.m; sourceTree = "<group>"; };
 		F0AD8BC11DE21371004AF394 /* DTJSContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DTJSContext.h; sourceTree = "<group>"; };
-		F0AD8BC31DE213FA004AF394 /* DTJSExport.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DTJSExport.h; sourceTree = "<group>"; };
-		F0AD8BC41DE213FA004AF394 /* DTJSExport.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.objc; fileEncoding = 4; path = DTJSExport.m; sourceTree = "<group>"; };
+		F0AD8BC31DE213FA004AF394 /* DTJSExporter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DTJSExporter.h; sourceTree = "<group>"; };
+		F0AD8BC41DE213FA004AF394 /* DTJSExporter.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.objc; fileEncoding = 4; path = DTJSExporter.m; sourceTree = "<group>"; };
 		F0B502011D700A2200043156 /* DTJavaScriptCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = DTJavaScriptCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0B502041D700A2200043156 /* DTJavaScriptCore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DTJavaScriptCore.h; sourceTree = "<group>"; };
 		F0B502061D700A2200043156 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -148,8 +150,9 @@
 				F0B5024D1D700DE200043156 /* DTJSVirtualMachine.m */,
 				F03BBCE31D7235A0006558B5 /* DTJSValueInternal.h */,
 				F0B7181A1DD606D0003441F0 /* DTJSContextInternal.h */,
-				F0AD8BC31DE213FA004AF394 /* DTJSExport.h */,
-				F0AD8BC41DE213FA004AF394 /* DTJSExport.m */,
+				F0AD8BC31DE213FA004AF394 /* DTJSExporter.h */,
+				F0AD8BC41DE213FA004AF394 /* DTJSExporter.m */,
+				F038FE551E0CC4EC000242DE /* DTJSConstants.h */,
 			);
 			path = DTJSRuntime;
 			sourceTree = "<group>";
@@ -166,10 +169,11 @@
 				F0B502501D700DE200043156 /* DTJSDebug.h in Headers */,
 				F0B7181B1DD606D0003441F0 /* DTJSContextInternal.h in Headers */,
 				F03BBCE51D7235A0006558B5 /* DTJSValueInternal.h in Headers */,
-				F0AD8BC51DE213FA004AF394 /* DTJSExport.h in Headers */,
+				F0AD8BC51DE213FA004AF394 /* DTJSExporter.h in Headers */,
 				F0B502531D700DE200043156 /* DTJSVirtualMachine.h in Headers */,
 				F0B502051D700A2200043156 /* DTJavaScriptCore.h in Headers */,
 				F0AD8BC21DE21371004AF394 /* DTJSContext.h in Headers */,
+				F038FE561E0CC500000242DE /* DTJSConstants.h in Headers */,
 				F0B502321D700A5300043156 /* duktape.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -219,7 +223,7 @@
 		F0B501F81D700A2200043156 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0730;
+				LastUpgradeCheck = 0810;
 				ORGANIZATIONNAME = kony;
 				TargetAttributes = {
 					F0B502001D700A2200043156 = {
@@ -274,7 +278,7 @@
 			files = (
 				F0B502521D700DE200043156 /* DTJSValue.m in Sources */,
 				F0AD8BBE1DE21315004AF394 /* DTJSContext.m in Sources */,
-				F0AD8BC61DE213FA004AF394 /* DTJSExport.m in Sources */,
+				F0AD8BC61DE213FA004AF394 /* DTJSExporter.m in Sources */,
 				F0B502541D700DE200043156 /* DTJSVirtualMachine.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -314,8 +318,10 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
@@ -362,8 +368,10 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
@@ -397,6 +405,7 @@
 				CLANG_ENABLE_OBJC_ARC = NO;
 				CODE_SIGN_IDENTITY = "";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				DEBUG = YES;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
 				DYLIB_COMPATIBILITY_VERSION = 1;
@@ -423,6 +432,7 @@
 				CLANG_ENABLE_OBJC_ARC = NO;
 				CODE_SIGN_IDENTITY = "";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				DEBUG = NO;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
 				DYLIB_COMPATIBILITY_VERSION = 1;

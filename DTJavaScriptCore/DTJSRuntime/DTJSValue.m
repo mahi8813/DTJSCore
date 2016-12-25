@@ -10,7 +10,7 @@
 #import "DTJSValueInternal.h"
 #import "DTJSContext.h"
 #import "DTJSContextInternal.h"
-#import "DTJSExport.h"
+#import "DTJSExporter.h"
 #import "duktape.h"
 #import <objc/runtime.h>
 
@@ -291,10 +291,10 @@ typedef union Value{
     else if(self.isObject){
         duk_idx_t obj_idx = [self push];
         NSDictionary *retObj = [NSDictionary dictionary];
-        duk_enum(self.context.dukContext, obj_idx, 0);
+        duk_enum(self.context.dukContext, obj_idx, DUK_ENUM_OWN_PROPERTIES_ONLY);
         while (duk_next(self.context.dukContext, -1 , 1 )) {
-            DTJSValue *jsValue = [DTJSValue valueWithValAtStackTopInContext:self.context];
-            DTJSValue *jsKey = [DTJSValue valueWithValAtStackTopInContext:self.context];
+            DTJSValue *jsValue = [DTJSValue valueWithValAtStackIndex:-1 inContext:self.context];
+            DTJSValue *jsKey = [DTJSValue valueWithValAtStackIndex:-2 inContext:self.context];
             if(jsKey.isString){
                 [retObj setValue:[jsValue toObject] forKey:[jsValue toString]];
             }
@@ -449,8 +449,8 @@ typedef union Value{
             id enumerable = [descriptor valueForKey:JSPropertyDescriptorEnumerableKey];
             id configurable = [descriptor valueForKey:JSPropertyDescriptorConfigurableKey];
             id value = [descriptor valueForKey:JSPropertyDescriptorValueKey];
-            id get = [descriptor valueForKey:JSPropertyDescriptorGetKey];
-            id set = [descriptor valueForKey:JSPropertyDescriptorSetKey];
+            id get = [(NSValue *)[descriptor valueForKey:JSPropertyDescriptorGetKey] pointerValue];
+            id set = [(NSValue *)[descriptor valueForKey:JSPropertyDescriptorSetKey] pointerValue];
             BOOL isDataDecriptor = value || writable;
             BOOL isAccessorDescriptor = get || set;
             
@@ -471,11 +471,11 @@ typedef union Value{
             }
             else if (isAccessorDescriptor){ //Accessor Descriptor
                 if(get){
-                    duk_idx_t func_idx =  duk_push_c_function(self.context.dukContext, (DukCallback)get, 0);//[... obj key getter]
+                    duk_push_c_function(self.context.dukContext, (DTCFunction)get, 0);//[... obj key getter]
                     flags |= DUK_DEFPROP_HAVE_GETTER;
                 }
                 if(set){
-                    duk_idx_t func_idx =  duk_push_c_function(self.context.dukContext, (DukCallback)set, 1);//[... obj key getter setter]
+                    duk_push_c_function(self.context.dukContext, (DTCFunction)set, 1);//[... obj key getter setter]
                     flags |= DUK_DEFPROP_HAVE_SETTER;
                 }
             }
@@ -725,12 +725,12 @@ typedef union Value{
     
     DTJSValue *jsValue = nil;
     if(context){
-        jsValue = [DTJSExport exportClass:cls inContext:context];
+        jsValue = [DTJSExporter exportClass:cls inContext:context];
     }
     return jsValue;
 }
 
-+ (DTJSValue *)valueWithNewFunctionInContext:(DTJSContext *)context withCallback:(DukCallback)aCallback noOfArgs:(NSInteger)nargs {
++ (DTJSValue *)valueWithNewFunctionInContext:(DTJSContext *)context withCallback:(DTCFunction)aCallback noOfArgs:(NSInteger)nargs {
     
     DTJSValue *jsValue = nil;
     if(context){

@@ -25,7 +25,8 @@
             self.dukContext = [self.virtualMachine initialContext];
             self.exceptionHandler = ^(DTJSContext *context, DTJSValue *exception){
                 context.exception = exception;
-                [exception push];//[... err]
+                [exception push];//[... err];
+                NSLog(@"JavaScript Error - %s\n", duk_safe_to_string(context.dukContext, -1));
                 duk_throw(context.dukContext);//code will never returns
             };
         }

@@ -1,5 +1,5 @@
 //
-//  DTJSExportTests.m
+//  DTJSExporterTests.m
 //  DTJavaScriptCore
 //
 //  Created by KH1128 on 03/12/16.
@@ -8,14 +8,19 @@
 
 #import <XCTest/XCTest.h>
 #import <Objc/runtime.h>
-#import "DTJSExport.h"
+#import "DTJSExporter.h"
 #import "DTJSContext.h"
 
-@interface DTJSExportTests : XCTestCase
+@protocol JSExport <NSObject>
+
 
 @end
 
-@implementation DTJSExportTests
+@interface DTJSExporterTests : XCTestCase
+
+@end
+
+@implementation DTJSExporterTests
 
 - (void)setUp {
     [super setUp];
@@ -33,7 +38,8 @@
     Method *mtdList = class_copyMethodList([NSObject class], &mtdCount);
     for (int i = 0; i < 5; i++) {
         SEL sel = method_getName(mtdList[i]);
-        NSString *jsName = [NSString jsMethodStringWithSelector:sel];
+        NSString *jsName = [DTJSExporter propertyNameFromSelector:sel];
+        NSLog(@"%d: %@\n", i, jsName);
         NSString *expectedJSName = nil;
         switch (i) {
             case 0:
@@ -59,7 +65,7 @@
 }
 
 
-- (void)testJsMethodStringWithSelectorUsingHardcodedSelectors {
+- (void)testPropertyNameFromSelectorUsingHardcodedSelectors {
     
     SEL sel1 = @selector(URLSession:task:willPerformHTTPRedirection:newRequest:completionHandler:);
     SEL sel2 = @selector(URLSession:task:didReceiveChallenge:completionHandler:);
@@ -68,34 +74,35 @@
     SEL sel5 = @selector(URLSession:task:didFinishCollectingMetrics:);
     SEL sel6 = @selector(URLSession:task:didCompleteWithError:);
     
-    NSString *jsName1 = [NSString jsMethodStringWithSelector:sel1];
+    NSString *jsName1 = [DTJSExporter propertyNameFromSelector:sel1];
     XCTAssertEqualObjects(jsName1, @"URLSessionTaskWillPerformHTTPRedirectionNewRequestCompletionHandler");
     
-    NSString *jsName2 = [NSString jsMethodStringWithSelector:sel2];
+    NSString *jsName2 = [DTJSExporter propertyNameFromSelector:sel2];
     XCTAssertEqualObjects(jsName2, @"URLSessionTaskDidReceiveChallengeCompletionHandler");
     
-    NSString *jsName3 = [NSString jsMethodStringWithSelector:sel3];
+    NSString *jsName3 = [DTJSExporter propertyNameFromSelector:sel3];
     XCTAssertEqualObjects(jsName3, @"URLSessionTaskNeedNewBodyStream");
     
-    NSString *jsName4 = [NSString jsMethodStringWithSelector:sel4];
+    NSString *jsName4 = [DTJSExporter propertyNameFromSelector:sel4];
     XCTAssertEqualObjects(jsName4, @"URLSessionTaskDidSendBodyDataTotalBytesSentTotalBytesExpectedToSend");
     
-    NSString *jsName5 = [NSString jsMethodStringWithSelector:sel5];
+    NSString *jsName5 = [DTJSExporter propertyNameFromSelector:sel5];
     XCTAssertEqualObjects(jsName5, @"URLSessionTaskDidFinishCollectingMetrics");
     
-    NSString *jsName6 = [NSString jsMethodStringWithSelector:sel6];
+    NSString *jsName6 = [DTJSExporter propertyNameFromSelector:sel6];
     XCTAssertEqualObjects(jsName6, @"URLSessionTaskDidCompleteWithError");
 }
 
 - (void)testExportClassToJSValueInContext{
     
     DTJSContext *context = [[DTJSContext alloc] init];
-    context[NSStringFromClass([NSArray class])] = [NSArray class];
+    Class cls = [NSArray class];
+    context[NSStringFromClass(cls)] = cls;
     
     [context evaluateScript:@"var desc = \"A new NSArray Object will be created\";  \
                               print(desc); \
                               var nsarray = new NSArray(); \
-                              var count = nsarray.count(); \
+                              var count = nsarray.count; \
                               print(\"created Object\" + nsarray); \
                               NSArray.arrayWithObject(); \
                               1;"];

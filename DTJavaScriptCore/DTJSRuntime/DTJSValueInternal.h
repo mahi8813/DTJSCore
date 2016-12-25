@@ -6,12 +6,8 @@
 //  Copyright © 2016 kony. All rights reserved.
 //
 
-#import "duktape.h"
 #import "DTJSValue.h"
-
-#define DUK_CALLBACK(funcName) duk_ret_t funcName(duk_context *ctx)
-
-typedef duk_c_function DukCallback;
+#import "DTJSConstants.h"
 
 @interface DTJSValue (Internal)
 
@@ -19,7 +15,7 @@ typedef duk_c_function DukCallback;
 + (DTJSValue *)valueWithJSArray:(void *)array inContext:(DTJSContext *)context;
 + (DTJSValue *)valueWithJSObject:(void *)object inContext:(DTJSContext *)context;
 + (DTJSValue *)valueWithObjcClass:(Class)cls inContext:(DTJSContext *)context;
-+ (DTJSValue *)valueWithNewFunctionInContext:(DTJSContext *)context withCallback:(DukCallback)aCallback noOfArgs:(NSInteger)nargs;
++ (DTJSValue *)valueWithNewFunctionInContext:(DTJSContext *)context withCallback:(DTCFunction)aCallback noOfArgs:(NSInteger)nargs;
 + (DTJSValue *)valueWithValAtStackIndex:(duk_idx_t)index inContext:(DTJSContext *)context;
 + (DTJSValue *)valueWithValAtStackTopInContext:(DTJSContext *)context;
 
