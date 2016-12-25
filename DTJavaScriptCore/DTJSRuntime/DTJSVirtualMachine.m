@@ -20,7 +20,7 @@
         if (!ctx) {
             printf("Failed to create a Duktape heap.\n");
         }
-        self.initialContext = ctx;
+        self.mainContext = ctx;
     }
     return self;
 }
@@ -29,9 +29,9 @@
 
 - (void)dealloc{
     
-    if(self.initialContext){
-        duk_destroy_heap(self.initialContext);
-        self.initialContext = nil;
+    if(self.mainContext){
+        duk_destroy_heap(self.mainContext);
+        self.mainContext = nil;
     }
     [super dealloc];
 }

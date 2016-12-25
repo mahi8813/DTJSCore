@@ -14,6 +14,12 @@
 #import "DTJSDebug.h"
 #import "duktape.h"
 
+@interface DTJSContext ()
+
+@property (nonatomic, retain) DTJSVirtualMachine *virtualMachine;
+
+@end
+
 @implementation DTJSContext
 
 #pragma mark - intializers
@@ -22,7 +28,7 @@
     @autoreleasepool {
         if(self = [super init]){
             self.virtualMachine = [[[DTJSVirtualMachine alloc] init] autorelease];
-            self.dukContext = [self.virtualMachine initialContext];
+            self.dukContext = [self.virtualMachine mainContext];
             self.exceptionHandler = ^(DTJSContext *context, DTJSValue *exception){
                 context.exception = exception;
                 [exception push];//[... err];
@@ -39,12 +45,15 @@
     if(self = [super init]){
         if(virtualMachine){
             self.virtualMachine = virtualMachine;
-            duk_context *initialContext = [virtualMachine initialContext];
-            if(initialContext){
-                duk_idx_t thr_idx = duk_push_thread(initialContext);
-                self.dukContext = duk_require_context(initialContext, thr_idx);
+            duk_context *mainContext = [virtualMachine mainContext];
+            if(mainContext){
+                duk_idx_t thr_idx = duk_push_thread(mainContext);
+                self.dukContext = duk_require_context(mainContext, thr_idx);
                 self.exceptionHandler = ^(DTJSContext *context, DTJSValue *exception){
                     context.exception = exception;
+                    [exception push];//[... err];
+                    NSLog(@"JavaScript Error - %s\n", duk_safe_to_string(context.dukContext, -1));
+                    duk_throw(context.dukContext);//code will never returns
                 };
             }
         }
@@ -61,7 +70,7 @@
     [super dealloc];
 }
 
-#pragma  mark script eval methods
+#pragma  mark - script eval methods
 
 - (DTJSValue *)evaluateScript:(NSString *)script{
     
@@ -127,10 +136,14 @@
 
 - (DTJSValue *)globalObject{
     
-    duk_push_global_object(self.dukContext);//[... gbl]
-    DTJSValue *jsValue =  [DTJSValue valueWithValAtStackTopInContext:self];
-    duk_pop(self.dukContext);//pops [... gbl]
-    return jsValue;
+    static DTJSValue *globalObj = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        duk_push_global_object(self.dukContext);//[... gbl]
+        globalObj =  [DTJSValue valueWithValAtStackTopInContext:self];
+        duk_pop(self.dukContext);//pops [... gbl]
+    });
+    return globalObj;
 }
 
 @end
@@ -155,10 +168,5 @@
 
     self.exceptionHandler(self, exception);
 }
-
-@end
-
-@implementation DTJSContext (JSExport)
-
 
 @end

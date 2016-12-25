@@ -11,7 +11,7 @@
 
 @interface DTJSVirtualMachine : NSObject
 
-@property (nonatomic, assign) duk_context *initialContext;
+@property (nonatomic, assign) duk_context *mainContext;
 
 - (instancetype)init;
 

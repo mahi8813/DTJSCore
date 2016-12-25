@@ -38,130 +38,83 @@ DUK_C_FUNCTION(JSObjectPropertyGetterCallback){
     return 1;
 }
 
-static NSMutableDictionary *_classMethodMap;
-static NSMutableDictionary *_instanceMethodMap;
-static NSMutableDictionary *_jsValueMap;
-
 @interface DTJSExporter ()
 
-@property (class) NSMutableDictionary *classMethodMap;
-@property (class) NSMutableDictionary *instanceMethodMap;
-@property (class) NSMutableDictionary *jsValueMap;
+@property (nonatomic, retain) NSMutableDictionary *classMethodMap;
+@property (nonatomic, retain) NSMutableDictionary *instanceMethodMap;
+@property (nonatomic, retain) NSMutableDictionary *classObjMap;
 
-+ (void)exportClassMethodsFromClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context;
-+ (void)exportInstanceMethodsFromClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context;
-+ (void)exportPropertiesFromClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context;
+- (void)exportClassMethodsFromClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context;
+- (void)exportInstanceMethodsFromClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context;
+- (void)exportPropertiesFromClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context;
 
 @end
 
 @implementation DTJSExporter
 
-#pragma mark - setter/getter impls
-
-+ (NSMutableDictionary *)classMethodMap{
-    if(!_classMethodMap){
-        //ensure that dictionary is created only once
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            _classMethodMap = [[NSMutableDictionary dictionary] retain];
-        });
-    }
-    return _classMethodMap;
-}
-
-+ (void)setClassMethodMap:(NSMutableDictionary *)classMethodMap{
++ (instancetype)sharedInstance{
     
-    if(_classMethodMap){
-        [_classMethodMap release]; _classMethodMap = nil;
-    }
-    if(classMethodMap){
-        _classMethodMap = [classMethodMap retain];
-    }
+    static DTJSExporter *sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[DTJSExporter alloc] init];
+        sharedInstance.classMethodMap = [NSMutableDictionary dictionary];
+        sharedInstance.instanceMethodMap = [NSMutableDictionary dictionary];
+        sharedInstance.classObjMap = [NSMutableDictionary dictionary];
+    });
+    return sharedInstance;
 }
 
-+ (NSMutableDictionary *)instanceMethodMap{
-    if(!_instanceMethodMap){
-        //ensure that dictionary is created only once
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            _instanceMethodMap = [[NSMutableDictionary dictionary] retain];
-        });
-    }
-    return _instanceMethodMap;
-}
-
-+ (void)setInstanceMethodMap:(NSMutableDictionary *)instanceMethodMap{
+//should never be called
+- (void)dealloc{
     
-    if(_instanceMethodMap){
-        [_instanceMethodMap release]; _instanceMethodMap = nil;
-    }
-    if(instanceMethodMap){
-        _instanceMethodMap = [instanceMethodMap retain];
-    }
-}
-
-+ (NSMutableDictionary *)jsValueMap{
-    if(!_jsValueMap){
-        //ensure that dictionary is created only once
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            _jsValueMap = [[NSMutableDictionary dictionary] retain];
-        });
-    }
-    return _jsValueMap;
-}
-
-+ (void)setJsValueMap:(NSMutableDictionary *)jsValueMap{
-    
-    if(_jsValueMap){
-        [_jsValueMap release]; _jsValueMap = nil;
-    }
-    if(jsValueMap){
-        _jsValueMap = [jsValueMap retain];
-    }
+    self.classMethodMap = nil;
+    self.instanceMethodMap = nil;
+    self.classObjMap = nil;
+    [super dealloc];
 }
 
 #pragma mark - export methods
 
-+ (DTJSValue *)exportClass:(Class)cls inContext:(DTJSContext *)context{
+- (DTJSValue *)exportClass:(Class)cls inContext:(DTJSContext *)context{
     
-    DTJSValue *jsValue = nil;
+    DTJSValue *classObj = nil;
     if(context && cls){
         if(object_isClass(cls)){
-            if(self.jsValueMap){
-                jsValue = [self.jsValueMap objectForKey:NSStringFromClass(cls)];
+            if(self.classObjMap){
+                classObj = [self.classObjMap objectForKey:NSStringFromClass(cls)];
             }
-            if(!jsValue){
+            if(!classObj){
                 {
                     //create jsObject for the class
-                    jsValue = [DTJSValue valueWithNewFunctionInContext:context withCallback:JSObjectConstructorCallback noOfArgs:0];
+                    classObj = [DTJSValue valueWithNewFunctionInContext:context withCallback:JSObjectConstructorCallback noOfArgs:0];
                     
-                    //export class methods to jsObject
-                    [DTJSExporter exportClassMethodsFromClass:cls toJSValue:jsValue inContext:context];
+                    //export class methods to classObj
+                    [self exportClassMethodsFromClass:cls toJSValue:classObj inContext:context];
                     
-                    //add a prototype object to the jsObject
-                    jsValue[@"prototype"] = [DTJSValue valueWithNewObjectInContext:context];
+                    //add a prototype object to the classObj
+                    classObj[@"prototype"] = [DTJSValue valueWithNewObjectInContext:context];
                     
-                    //export instance methods & properties to prototype object
-                    [DTJSExporter exportInstanceMethodsFromClass:cls toJSValue:jsValue[@"prototype"] inContext:context];
-                    [DTJSExporter exportPropertiesFromClass:cls toJSValue:jsValue[@"prototype"] inContext:context];
+                    //export instance methods & properties to classObj's prototype object
+                    [self exportInstanceMethodsFromClass:cls toJSValue:classObj[@"prototype"] inContext:context];
+                    [self exportPropertiesFromClass:cls toJSValue:classObj[@"prototype"] inContext:context];
                     
-                    //store jsValue in jsValueMap
-                    [self.jsValueMap setObject:jsValue forKey:NSStringFromClass(cls)];
+                    //store classObj in classObjMap
+                    [self.classObjMap setObject:classObj forKey:NSStringFromClass(cls)];
                 }
                 {
                     //create prototype based inheritance for super class
-                    DTJSValue *superClsObj = [DTJSExporter exportClass:class_getSuperclass(cls) inContext:context];
+                    DTJSValue *superClsObj = [self exportClass:class_getSuperclass(cls) inContext:context];
                     if(superClsObj){
                         
                         //set __proto__ of derived class obj to super class obj
-                        duk_idx_t obj_idx = [jsValue push];//[... clsObj]
+                        duk_idx_t obj_idx = [classObj push];//[... clsObj]
                         [superClsObj push];//[... clsObj, supClsObj]
                         duk_set_prototype(context.dukContext,  obj_idx);//[... clsObj]
                         duk_pop(context.dukContext);//pops [... clsObj]
                         
                         //set __proto__ of derived class prototype obj to super class prototype obj
-                        duk_idx_t cls_protyp_obj_idx = [jsValue[@"prototype"] push];//[... clsProTypObj]
+                        duk_idx_t cls_protyp_obj_idx = [classObj[@"prototype"] push];//[... clsProTypObj]
                         [superClsObj[@"prototype"] push];//[... clsProTypObj, supClsProTypObj]
                         duk_set_prototype(context.dukContext, cls_protyp_obj_idx);//[... clsProTypObj]
                         duk_pop(context.dukContext);//pops [... clsProTypObj]
@@ -170,12 +123,12 @@ static NSMutableDictionary *_jsValueMap;
             }
         }
     }
-    return jsValue;
+    return classObj;
 }
 
-+ (void)exportClassMethodsFromClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context{
+- (void)exportClassMethodsFromClass:(Class)cls toJSValue:(DTJSValue *)classObj inContext:(DTJSContext *)context{
     
-    if(jsValue && context && cls){
+    if(classObj && context && cls){
         if(object_isClass(cls)){
             NSString *mtdJSName = nil;
             DTJSValue *mtdJSValue = nil;
@@ -190,7 +143,7 @@ static NSMutableDictionary *_jsValueMap;
                 noOfArgs = method_getNumberOfArguments(mtdList[i]);
                 mtdJSName = [DTJSExporter propertyNameFromSelector:sel];
                 mtdJSValue = [DTJSValue valueWithNewFunctionInContext:context withCallback:JSObjectClassMethodCallback noOfArgs:noOfArgs];
-                jsValue[mtdJSName] = mtdJSValue;
+                classObj[mtdJSName] = mtdJSValue;
                 
                 // store the duk func obj and objC method selector as key-value pairs
                 // key = duk func obj
@@ -204,9 +157,9 @@ static NSMutableDictionary *_jsValueMap;
     }
 }
 
-+ (void)exportInstanceMethodsFromClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context{
+- (void)exportInstanceMethodsFromClass:(Class)cls toJSValue:(DTJSValue *)classObj inContext:(DTJSContext *)context{
     
-    if(jsValue && context && cls){
+    if(classObj && context && cls){
         if(object_isClass(cls)){
             NSString *mtdJSName = nil;
             DTJSValue *mtdJSValue = nil;
@@ -222,7 +175,7 @@ static NSMutableDictionary *_jsValueMap;
                     noOfArgs = method_getNumberOfArguments(mtdList[i]);
                     mtdJSName = [DTJSExporter propertyNameFromSelector:sel];
                     mtdJSValue = [DTJSValue valueWithNewFunctionInContext:context withCallback:JSObjectInstanceMethodCallback noOfArgs:noOfArgs];
-                    jsValue[mtdJSName] = mtdJSValue;
+                    classObj[mtdJSName] = mtdJSValue;
                     
                     // store the duk func obj and objC method selector as key-value pairs
                     // key = duk func obj
@@ -238,9 +191,9 @@ static NSMutableDictionary *_jsValueMap;
     }
 }
 
-+ (void)exportPropertiesFromClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context{
+- (void)exportPropertiesFromClass:(Class)cls toJSValue:(DTJSValue *)classObj inContext:(DTJSContext *)context{
     
-    if(jsValue && context && cls){
+    if(classObj && context && cls){
         if(object_isClass(cls)){
             const char *propName = nil;
             unsigned int propCount = 0;
@@ -260,7 +213,7 @@ static NSMutableDictionary *_jsValueMap;
                         [descriptor setValue:setterValue forKey:JSPropertyDescriptorSetKey];
                         
                     }
-                    [jsValue defineProperty:[NSString stringWithUTF8String:propName] descriptor:descriptor];
+                    [classObj defineProperty:[NSString stringWithUTF8String:propName] descriptor:descriptor];
                     
                 }
                 free(propList);propList = 0;

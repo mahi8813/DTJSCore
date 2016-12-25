@@ -725,7 +725,8 @@ typedef union Value{
     
     DTJSValue *jsValue = nil;
     if(context){
-        jsValue = [DTJSExporter exportClass:cls inContext:context];
+        jsValue = [[DTJSExporter sharedInstance] exportClass:cls inContext:context];
+        jsValue[@"className"] = NSStringFromClass(cls);
     }
     return jsValue;
 }

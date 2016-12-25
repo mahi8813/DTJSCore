@@ -14,8 +14,11 @@
 
 @interface DTJSContext : NSObject
 
-@property (nonatomic, retain) DTJSVirtualMachine *virtualMachine;
+@property (readonly, retain) DTJSVirtualMachine *virtualMachine;
 @property (nonatomic, assign) duk_context *dukContext;
+@property (readonly, retain) DTJSValue *globalObject;
+@property (nonatomic, retain) DTJSValue *exception;
+@property (nonatomic, copy) void(^exceptionHandler)(DTJSContext *context, DTJSValue *exception);
 
 - (instancetype)init;
 - (instancetype)initWithVirtualMachine:(DTJSVirtualMachine *)virtualMachine;
@@ -26,12 +29,7 @@
 /* global code */
 - (DTJSValue *)evaluateScript:(NSString *)script  withSourceURL:(NSURL *)sourceURL;
 
-@property (readonly, retain) DTJSValue *globalObject;
-@property (nonatomic, strong) DTJSValue *exception;
-@property (nonatomic, copy) void(^exceptionHandler)(DTJSContext *context, DTJSValue *exception);
-
 @end
-
 
 @interface DTJSContext (SubscriptSupport)
 

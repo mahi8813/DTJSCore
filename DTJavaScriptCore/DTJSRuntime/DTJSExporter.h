@@ -13,7 +13,9 @@
 
 @interface DTJSExporter : NSObject
 
-+ (DTJSValue *)exportClass:(Class)cls inContext:(DTJSContext *)context;
++ (instancetype)sharedInstance;
 + (NSString *)propertyNameFromSelector:(SEL)selector;
+
+- (DTJSValue *)exportClass:(Class)cls inContext:(DTJSContext *)context;
 
 @end
