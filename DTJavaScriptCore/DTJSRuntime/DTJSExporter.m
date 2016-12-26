@@ -34,19 +34,17 @@ DUK_C_FUNCTION(JSObjectPropertySetterCallback){
 
 DUK_C_FUNCTION(JSObjectPropertyGetterCallback){
     
-    duk_push_int(ctx, 2);
-    return 1;
+    return 0;
 }
 
 @interface DTJSExporter ()
 
-@property (nonatomic, retain) NSMutableDictionary *classMethodMap;
-@property (nonatomic, retain) NSMutableDictionary *instanceMethodMap;
 @property (nonatomic, retain) NSMutableDictionary *classObjMap;
 
-- (void)exportClassMethodsFromClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context;
-- (void)exportInstanceMethodsFromClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context;
-- (void)exportPropertiesFromClass:(Class)cls toJSValue:(DTJSValue *)jsValue inContext:(DTJSContext *)context;
+- (void)exportMethodsFromProtocol:(Protocol *)protocol toJSValue:(DTJSValue *)classObj inContext:(DTJSContext *)context;
+- (void)exportPropertiesFromProtocol:(Protocol *)protocol toJSValue:(DTJSValue *)classObj inContext:(DTJSContext *)context;
+- (void)exportProtocol:(Protocol *)protocol toJSValue:(DTJSValue *)classObj inContext:(DTJSContext *)context;
+- (void)exportProtocolsOfClass:(Class)cls toJSValue:(DTJSValue *)classObj inContext:(DTJSContext *)context;
 
 @end
 
@@ -58,8 +56,6 @@ DUK_C_FUNCTION(JSObjectPropertyGetterCallback){
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         sharedInstance = [[DTJSExporter alloc] init];
-        sharedInstance.classMethodMap = [NSMutableDictionary dictionary];
-        sharedInstance.instanceMethodMap = [NSMutableDictionary dictionary];
         sharedInstance.classObjMap = [NSMutableDictionary dictionary];
     });
     return sharedInstance;
@@ -68,13 +64,106 @@ DUK_C_FUNCTION(JSObjectPropertyGetterCallback){
 //should never be called
 - (void)dealloc{
     
-    self.classMethodMap = nil;
-    self.instanceMethodMap = nil;
-    self.classObjMap = nil;
     [super dealloc];
 }
 
 #pragma mark - export methods
+
+- (void)exportMethodsFromProtocol:(Protocol *)protocol toJSValue:(DTJSValue *)classObj inContext:(DTJSContext *)context{
+    
+    if(classObj && context){
+        if(protocol && protocol_conformsToProtocol(protocol, objc_getProtocol("JSExport"))){
+            unsigned outCount = 0;
+            struct objc_method_description *methods = nil;
+            DTCFunction dukCFunction = nil;
+            if ([@(protocol_getName(protocol)) hasSuffix: @"ClassExports"]){
+                methods = protocol_copyMethodDescriptionList(protocol, YES, NO, &outCount);
+                dukCFunction = JSObjectClassMethodCallback;
+            }
+            else if ([@(protocol_getName(protocol)) hasSuffix: @"InstanceExports"]){
+                methods = protocol_copyMethodDescriptionList(protocol, YES, YES, &outCount);
+                dukCFunction = JSObjectInstanceMethodCallback;
+                classObj = classObj[@"prototype"];
+            }
+            if(methods){
+                for (unsigned i = 0; i < outCount; i++) {
+                    SEL sel = methods[i].name;
+                    NSInteger noOfArgs = strlen(methods[i].types);
+                    NSString *propName= [DTJSExporter propertyNameFromSelector:sel];
+                    DTJSValue *propValue = [DTJSValue valueWithNewFunctionInContext:context withCallback:dukCFunction noOfArgs:noOfArgs];
+                    propValue[@"methodName"] = NSStringFromSelector(sel);
+                    classObj[propName] = propValue;
+                    
+                }
+                free(methods);methods = 0;
+            }
+        }
+    }
+}
+
+- (void)exportPropertiesFromProtocol:(Protocol *)protocol toJSValue:(DTJSValue *)classObj inContext:(DTJSContext *)context{
+    
+    if(classObj && context){
+        if(protocol && protocol_conformsToProtocol(protocol, objc_getProtocol("JSExport"))){
+            unsigned outCount = 0;
+            objc_property_t *properties = nil;
+            if([@(protocol_getName(protocol)) hasSuffix: @"InstanceExports"]){
+                properties = protocol_copyPropertyList(protocol, &outCount);
+            }
+            if(properties && outCount > 0){
+                for (unsigned i = 0; i < outCount; i++) {
+                    //prop name
+                    const char *propName = property_getName(properties[i]);
+                    
+                    //descriptor
+                    NSMutableDictionary *descriptor = [NSMutableDictionary dictionary];
+                    NSValue *getterValue = [[NSValue valueWithPointer:(void *)JSObjectPropertyGetterCallback] retain];
+                    [descriptor setValue:getterValue forKey:JSPropertyDescriptorGetKey];
+                    [descriptor setValue:[NSNumber numberWithBool:false] forKey:JSPropertyDescriptorEnumerableKey];
+                    [descriptor setValue:[NSNumber numberWithBool:true]  forKey:JSPropertyDescriptorConfigurableKey];
+                
+                    //check attributes for read-write:
+                    const char *propertyAttributes = property_getAttributes(properties[i]);
+                    NSArray *attributes = [[NSString stringWithUTF8String:propertyAttributes] componentsSeparatedByString:@","];
+                    if(![attributes containsObject:@"R"]){
+                        NSValue *setterValue = [[NSValue valueWithPointer:(void *)JSObjectPropertySetterCallback] retain];
+                        [descriptor setValue:setterValue forKey:JSPropertyDescriptorSetKey];
+                        [descriptor setValue:[NSNumber numberWithBool:true] forKey:JSPropertyDescriptorEnumerableKey];
+                    }
+                    
+                    //define property
+                    [classObj defineProperty:[NSString stringWithUTF8String:propName] descriptor:descriptor];
+                }
+                free(properties);properties = 0;
+            }
+        }
+    }
+}
+
+- (void)exportProtocol:(Protocol *)protocol toJSValue:(DTJSValue *)classObj inContext:(DTJSContext *)context{
+    
+    if(classObj && context){
+        if(protocol && protocol_conformsToProtocol(protocol, objc_getProtocol("JSExport"))){
+            [self exportMethodsFromProtocol:protocol toJSValue:classObj inContext:context];
+            [self exportPropertiesFromProtocol:protocol toJSValue:classObj inContext:context];
+        }
+    }
+}
+
+- (void)exportProtocolsOfClass:(Class)cls toJSValue:(DTJSValue *)classObj inContext:(DTJSContext *)context{
+    
+    Protocol* jsExportProtocol = objc_getProtocol("JSExport");
+    
+    unsigned protocolsCount;
+    Protocol** protocols = class_copyProtocolList(cls, &protocolsCount);
+    if(protocols && protocolsCount > 0){
+        for (unsigned i = 0; i < protocolsCount; i++) {
+            if( protocol_conformsToProtocol(protocols[i], jsExportProtocol)){
+                [self exportProtocol:protocols[i] toJSValue:classObj inContext:context];
+            }
+        }
+    }
+}
 
 - (DTJSValue *)exportClass:(Class)cls inContext:(DTJSContext *)context{
     
@@ -89,15 +178,11 @@ DUK_C_FUNCTION(JSObjectPropertyGetterCallback){
                     //create jsObject for the class
                     classObj = [DTJSValue valueWithNewFunctionInContext:context withCallback:JSObjectConstructorCallback noOfArgs:0];
                     
-                    //export class methods to classObj
-                    [self exportClassMethodsFromClass:cls toJSValue:classObj inContext:context];
-                    
                     //add a prototype object to the classObj
                     classObj[@"prototype"] = [DTJSValue valueWithNewObjectInContext:context];
                     
-                    //export instance methods & properties to classObj's prototype object
-                    [self exportInstanceMethodsFromClass:cls toJSValue:classObj[@"prototype"] inContext:context];
-                    [self exportPropertiesFromClass:cls toJSValue:classObj[@"prototype"] inContext:context];
+                    //export jsexport protocols to classObj
+                    [self exportProtocolsOfClass:cls toJSValue:classObj inContext:context];
                     
                     //store classObj in classObjMap
                     [self.classObjMap setObject:classObj forKey:NSStringFromClass(cls)];
@@ -126,148 +211,30 @@ DUK_C_FUNCTION(JSObjectPropertyGetterCallback){
     return classObj;
 }
 
-- (void)exportClassMethodsFromClass:(Class)cls toJSValue:(DTJSValue *)classObj inContext:(DTJSContext *)context{
-    
-    if(classObj && context && cls){
-        if(object_isClass(cls)){
-            NSString *mtdJSName = nil;
-            DTJSValue *mtdJSValue = nil;
-            SEL sel = nil;
-            NSInteger noOfArgs = 0;
-            NSValue *key = nil;
-            NSValue *value = nil;
-            unsigned int mtdCount = 0;
-            Method *mtdList = class_copyMethodList(object_getClass(cls), &mtdCount);
-            for (int i = 0; i < mtdCount; i++) {
-                sel = method_getName(mtdList[i]);
-                noOfArgs = method_getNumberOfArguments(mtdList[i]);
-                mtdJSName = [DTJSExporter propertyNameFromSelector:sel];
-                mtdJSValue = [DTJSValue valueWithNewFunctionInContext:context withCallback:JSObjectClassMethodCallback noOfArgs:noOfArgs];
-                classObj[mtdJSName] = mtdJSValue;
-                
-                // store the duk func obj and objC method selector as key-value pairs
-                // key = duk func obj
-                // val = objC method selector
-                key = [NSValue valueWithPointer:[mtdJSValue objectValue]];
-                value = [NSValue valueWithPointer:sel];
-                [self.classMethodMap setObject:value forKey:key];
-            }
-            free(mtdList);mtdList = 0;
-        }
-    }
-}
-
-- (void)exportInstanceMethodsFromClass:(Class)cls toJSValue:(DTJSValue *)classObj inContext:(DTJSContext *)context{
-    
-    if(classObj && context && cls){
-        if(object_isClass(cls)){
-            NSString *mtdJSName = nil;
-            DTJSValue *mtdJSValue = nil;
-            SEL sel = nil;
-            NSInteger noOfArgs = 0;
-            NSValue *key = nil;
-            NSValue *value = nil;
-            unsigned int mtdCount = 0;
-            Method *mtdList = class_copyMethodList(cls, &mtdCount);
-            if(mtdList && mtdCount > 0){
-                for (int i = 0; i < mtdCount; i++) {
-                    sel = method_getName(mtdList[i]);
-                    noOfArgs = method_getNumberOfArguments(mtdList[i]);
-                    mtdJSName = [DTJSExporter propertyNameFromSelector:sel];
-                    mtdJSValue = [DTJSValue valueWithNewFunctionInContext:context withCallback:JSObjectInstanceMethodCallback noOfArgs:noOfArgs];
-                    classObj[mtdJSName] = mtdJSValue;
-                    
-                    // store the duk func obj and objC method selector as key-value pairs
-                    // key = duk func obj
-                    // val = objC method selector
-                    key = [NSValue valueWithPointer:[mtdJSValue objectValue]];
-                    value = [NSValue valueWithPointer:sel];
-                    [self.instanceMethodMap setObject:value
-                                               forKey:key];
-                }
-                free(mtdList);mtdList = 0;
-            }
-        }
-    }
-}
-
-- (void)exportPropertiesFromClass:(Class)cls toJSValue:(DTJSValue *)classObj inContext:(DTJSContext *)context{
-    
-    if(classObj && context && cls){
-        if(object_isClass(cls)){
-            const char *propName = nil;
-            unsigned int propCount = 0;
-            objc_property_t *propList = class_copyPropertyList(cls, &propCount);
-            if(propList && propCount > 0){
-                for (int i = 0; i < propCount; i++) {
-                    propName = property_getName(propList[i]);
-                    
-                    NSMutableDictionary *descriptor = [NSMutableDictionary dictionary];
-                    NSValue *getterValue = [[NSValue valueWithPointer:(void *)JSObjectPropertyGetterCallback] retain];
-                    [descriptor setValue:getterValue forKey:JSPropertyDescriptorGetKey];
-                    const char *propertyAttributes = property_getAttributes(propList[i]);
-                    //check those attributes for read-only:
-                    NSArray *attributes = [[NSString stringWithUTF8String:propertyAttributes] componentsSeparatedByString:@","];
-                    if(![attributes containsObject:@"R"]){
-                        NSValue *setterValue = [[NSValue valueWithPointer:(void *)JSObjectPropertySetterCallback] retain];
-                        [descriptor setValue:setterValue forKey:JSPropertyDescriptorSetKey];
-                        
-                    }
-                    [classObj defineProperty:[NSString stringWithUTF8String:propName] descriptor:descriptor];
-                    
-                }
-                free(propList);propList = 0;
-            }
-        }
-    }
-}
-
 #pragma mark - utility methods
-
-//+ (NSString*)propertyNameFromSelector:(SEL)selector{
-//
-//    NSArray* split = [NSStringFromSelector(selector) componentsSeparatedByString: @":"];
-//    NSMutableString* propertyName = [NSMutableString string];
-//    for (NSInteger i = 0; i < split.count; i++) {
-//        NSString* string = split[i];
-//        if (i > 0) {
-//            if (string.length > 0) {
-//                NSString* firstCharacter = [string substringWithRange: NSMakeRange(0, 1)];
-//                [propertyName appendString: [string stringByReplacingCharactersInRange: NSMakeRange(0, 1) withString: firstCharacter.uppercaseString]];
-//            }
-//        } else {
-//            [propertyName appendString: string];
-//        }
-//    }
-//
-//    return propertyName;
-//}
 
 + (NSString*)propertyNameFromSelector:(SEL)selector{
     
-    const char *srcStr = sel_getName(selector);
-    void *dstStr = calloc(1, sizeof(char)*(strlen(srcStr)+1));
-    char *propertyName =  strcpy(dstStr, srcStr) ;
-    if(propertyName){
-        unsigned long length = strlen(propertyName);
-        int j = 0;
-        for(int i = 0; i < length; i++){
-            if(propertyName[i] == ':'){
-                ++i;
-                if(propertyName[i] >= 'a' && propertyName[i] <= 'z'){
-                    propertyName[j++] = propertyName[i] - 32;//'a' - 'A' = 32
-                }else{
-                    propertyName[j++] = propertyName[i];
-                }
+    NSArray* split = [NSStringFromSelector(selector) componentsSeparatedByString: @":"];
+    NSMutableString* propertyName = [NSMutableString string];
+    for (NSInteger i = 0; i < split.count; i++) {
+        NSString* string = split[i];
+        if (i > 0) {
+            if (string.length > 0) {
+                NSString* firstCharacter = [string substringWithRange: NSMakeRange(0, 1)];
+                [propertyName appendString: [string stringByReplacingCharactersInRange: NSMakeRange(0, 1) withString: firstCharacter.uppercaseString]];
             }
-            else{
-                propertyName[j++] = propertyName[i];
-            }
+        } else {
+            [propertyName appendString: string];
         }
-        propertyName[j] = '\0';
-        return [NSString stringWithUTF8String:propertyName];
     }
-    return nil;
+    
+    //remove js prefix if any
+    if([propertyName hasPrefix:@"js"]){
+        [propertyName deleteCharactersInRange:NSMakeRange(0, 2)];
+    }
+    
+    return propertyName;
 }
 
 @end
