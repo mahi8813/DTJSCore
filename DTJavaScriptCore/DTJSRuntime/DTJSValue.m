@@ -40,6 +40,7 @@ typedef union Value{
 @property (readwrite) BOOL isArray;
 @property (readwrite) BOOL isDate;
 @property (readwrite) BOOL isFunction;
+@property (readwrite) BOOL isPointer;
 
 + (DTJSValue *)valueWithString:(NSString *)value inContext:(DTJSContext *)context;
 + (DTJSValue *)valueWithArray:(NSArray *)value inContext:(DTJSContext *)context;
@@ -721,12 +722,26 @@ typedef union Value{
     return jsValue;
 }
 
++ (DTJSValue *)valueWithPointer:(void *)value inContext:(DTJSContext *)context{
+    
+    DTJSValue *jsValue = nil;
+    if(context){
+        if(value){
+            jsValue = [[DTJSValue alloc] initWithContext:context];
+            jsValue.isPointer = true;
+            jsValue.value->objectValue =value;
+        }
+    }
+    return jsValue;
+}
+
+
 + (DTJSValue *)valueWithObjcClass:(Class)cls inContext:(DTJSContext *)context{
     
     DTJSValue *jsValue = nil;
     if(context){
         jsValue = [[DTJSExporter sharedInstance] exportClass:cls inContext:context];
-        jsValue[@"className"] = NSStringFromClass(cls);
+        jsValue[@("\xFF" "className")] = NSStringFromClass(cls);
     }
     return jsValue;
 }
@@ -780,7 +795,7 @@ typedef union Value{
                 break;
             case DUK_TYPE_OBJECT:
             {
-                void *value =  duk_get_heapptr(context.dukContext, index);
+                void *value =  duk_require_heapptr(context.dukContext, index);
                 if(duk_is_array(context.dukContext, index)){
                     jsValue = [DTJSValue valueWithJSArray:value inContext:context];
                 }
@@ -790,6 +805,12 @@ typedef union Value{
                 else{
                     jsValue = [DTJSValue valueWithJSObject:value inContext:context];
                 }
+            }
+                break;
+            case DUK_TYPE_POINTER:
+            {
+                void *value = duk_require_pointer(context.dukContext, index);
+                jsValue = [DTJSValue valueWithPointer:value inContext:context];
             }
                 break;
             default://DUK_TYPE_NONE
@@ -828,6 +849,9 @@ typedef union Value{
             self.isObject ||
             self.isFunction){
         duk_push_heapptr(self.context.dukContext, self.value->objectValue);
+    }
+    else if (self.isPointer){
+        duk_push_pointer(self.context.dukContext, self.value->objectValue);
     }
     return duk_require_top_index(self.context.dukContext);
 }

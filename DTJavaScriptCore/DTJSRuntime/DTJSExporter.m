@@ -8,12 +8,48 @@
 
 #import "DTJSExporter.h"
 #import "DTJSContext.h"
+#import "DTJSContextInternal.h"
 #import "DTJSValueInternal.h"
 #import "DTJSConstants.h"
 #import <objc/runtime.h>
 
+DUK_C_FUNCTION(JSObjectDestructorCallback){
+    
+    if(ctx){
+    
+    }
+    return 0;
+}
+
 DUK_C_FUNCTION(JSObjectConstructorCallback){
     
+    //check if constructor is invoked using new
+    if(ctx && duk_is_constructor_call(ctx)){
+        DTJSContext *context = [DTJSContext currentContext];
+        if(context && context.dukContext == ctx){
+            //this refers to object being constructed
+            DTJSValue *this = [DTJSContext currentThis];
+            if(this){
+                DTJSValue *className = this[@("\xFF" "className")];
+                if(className){
+                    Class class = NSClassFromString([className toString]);
+                    id obj = [[class alloc] init];
+                    //store the native reference
+                    this[@("\xFF" "nativeRef")] = [DTJSValue valueWithPointer:(void *)obj inContext:context];
+                }
+                
+                //store a boolean flag to mark the object as deleted
+                //because the destructor may be called several times
+                this[@("\xFF" "deleted")] = [DTJSValue valueWithBool:false inContext:context];
+                
+                //store the function destructor
+                [this push];//[... newObject]
+                duk_push_c_function(context.dukContext, JSObjectDestructorCallback, 1);
+                duk_set_finalizer(context.dukContext, -2);
+                [this pop];//pops [... newObject]
+            }
+        }
+    }
     return 0;
 }
 

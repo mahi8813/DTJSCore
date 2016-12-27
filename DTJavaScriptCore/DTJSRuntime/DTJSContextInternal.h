@@ -11,6 +11,11 @@
 
 @interface DTJSContext (Internal)
 
+//TODO: remove commented code
+//+ (void)setContext:(DTJSContext *)context ofDukContext:(duk_context *)ctx;
+//+ (DTJSContext *)contextOfDukContext:(duk_context *)ctx;
+//- (DTJSValue *)thisObject;
+
 - (void)notifyExecption:(DTJSValue *)exception;
 
 @end

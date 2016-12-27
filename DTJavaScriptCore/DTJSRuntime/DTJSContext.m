@@ -22,6 +22,8 @@
 
 @implementation DTJSContext
 
+static DTJSContext *_currentContext = nil;
+
 #pragma mark - intializers
 
 - (instancetype)init{
@@ -77,6 +79,7 @@
     DTJSValue *jsValue = nil;
     if(script){
         duk_push_string(self.dukContext, [script cStringUsingEncoding:NSUTF8StringEncoding]);//[src]
+        [DTJSContext setCurrentContext:self];
         if (duk_peval(self.dukContext) != 0) {//[... err]
             DTJSDebugLog(@"eval failed");
             jsValue = [DTJSValue valueWithValAtStackTopInContext:self];
@@ -86,6 +89,7 @@
             DTJSDebugLog(@"eval successful");
             jsValue = [DTJSValue valueWithValAtStackTopInContext:self];
         }
+        [DTJSContext setCurrentContext:nil];
         duk_pop(self.dukContext);//pop [... res]
     }
     return jsValue;
@@ -96,6 +100,7 @@
     DTJSValue *jsValue = nil;
     if(fileURL){
         const char *filePath = [[fileURL path] cStringUsingEncoding:NSUTF8StringEncoding];
+        [DTJSContext setCurrentContext:self];
         if (duk_peval_file(self.dukContext, filePath) != 0) {//[... err]
             DTJSDebugLog(@"eval failed");
             jsValue = [DTJSValue valueWithValAtStackTopInContext:self];
@@ -105,6 +110,7 @@
             DTJSDebugLog(@"eval successful");
             jsValue = [DTJSValue valueWithValAtStackTopInContext:self];
         }
+        [DTJSContext setCurrentContext:nil];
         duk_pop(self.dukContext);//pops [... res]
     }
     return jsValue;
@@ -118,6 +124,7 @@
         if(sourceURL){
             const char *sourcePath = [[sourceURL path] cStringUsingEncoding:NSUTF8StringEncoding];
             duk_push_string(self.dukContext, sourcePath);//[... src filename]
+            [DTJSContext setCurrentContext:self];
             if (duk_pcompile(self.dukContext, 0) != 0) {//[... func]
                 DTJSDebugLog(@"compile failed");
                 jsValue = [DTJSValue valueWithValAtStackTopInContext:self];
@@ -128,6 +135,7 @@
                 duk_call(self.dukContext, 0);//[... func ] -> [... result ]
                 jsValue = [DTJSValue valueWithValAtStackTopInContext:self];
             }
+            [DTJSContext setCurrentContext:nil];
             duk_pop(self.dukContext);//pop result
         }
     }
@@ -144,6 +152,30 @@
         duk_pop(self.dukContext);//pops [... gbl]
     });
     return globalObj;
+}
+
++ (void)setCurrentContext:(DTJSContext *)currentContext{
+    
+    if(_currentContext != currentContext){
+        _currentContext = currentContext;
+    }
+}
+
++ (DTJSContext *)currentContext{
+    
+    return _currentContext;
+}
+
++ (DTJSValue *)currentThis{
+    
+    DTJSValue *this = nil;
+    DTJSContext *context = [DTJSContext currentContext];
+    if(context){
+        duk_push_this(context.dukContext);//[... newObj]
+        this = [DTJSValue valueWithValAtStackTopInContext:context];
+        duk_pop(context.dukContext);//pops [... newObj]
+    }
+    return this;
 }
 
 @end
@@ -163,6 +195,39 @@
 @end
 
 @implementation DTJSContext (Internal)
+
+//TODO: remove commented code
+//+ (void)setContext:(DTJSContext *)context ofDukContext:(duk_context *)ctx{
+//
+//    if(ctx && context){
+//        duk_push_thread_stash(ctx, ctx);
+//        duk_push_pointer(ctx, (void *)context);
+//        duk_put_prop_string(ctx, -1, "context");
+//        duk_pop_2(ctx);
+//    }
+//}
+//
+//+ (DTJSContext *)contextOfDukContext:(duk_context *)ctx{
+//    
+//    void *context = nil;
+//    if(ctx){
+//        duk_push_thread_stash(ctx, ctx);//[... thdStash]
+//        if(duk_get_prop_string(ctx, -1, "context")){//[... thdStash, ptr]
+//            context = duk_require_pointer(ctx, -1);
+//        }
+//        duk_pop_2(ctx);
+//    }
+//    return (DTJSContext *)context;
+//}
+//
+//- (DTJSValue *)thisObject{
+//    
+//    DTJSValue *thisObj = nil;
+//    duk_push_this(self.dukContext);//[... newObj]
+//    thisObj = [DTJSValue valueWithValAtStackTopInContext:self];
+//    duk_pop(self.dukContext);//pops [... newObj]
+//    return thisObj;
+//}
 
 - (void)notifyExecption:(DTJSValue *)exception{
 

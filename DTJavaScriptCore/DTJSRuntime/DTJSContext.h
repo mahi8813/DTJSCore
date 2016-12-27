@@ -14,19 +14,24 @@
 
 @interface DTJSContext : NSObject
 
-@property (readonly, retain) DTJSVirtualMachine *virtualMachine;
+//TODO: no need to expose this prop
 @property (nonatomic, assign) duk_context *dukContext;
+
+@property (readonly, retain) DTJSVirtualMachine *virtualMachine;
 @property (readonly, retain) DTJSValue *globalObject;
 @property (nonatomic, retain) DTJSValue *exception;
 @property (nonatomic, copy) void(^exceptionHandler)(DTJSContext *context, DTJSValue *exception);
 
++ (DTJSContext *)currentContext;
++ (DTJSValue *)currentThis;
+
 - (instancetype)init;
 - (instancetype)initWithVirtualMachine:(DTJSVirtualMachine *)virtualMachine;
 
-/* eval code */
+//eval code
 - (DTJSValue *)evaluateScript:(NSString *)script;
 - (DTJSValue *)evaluateScriptInFile:(NSURL *)fileURL;
-/* global code */
+//global code
 - (DTJSValue *)evaluateScript:(NSString *)script  withSourceURL:(NSURL *)sourceURL;
 
 @end

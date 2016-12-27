@@ -14,6 +14,8 @@
 + (DTJSValue *)valueWithJSString:(const char *) string inContext:(DTJSContext *)context;
 + (DTJSValue *)valueWithJSArray:(void *)array inContext:(DTJSContext *)context;
 + (DTJSValue *)valueWithJSObject:(void *)object inContext:(DTJSContext *)context;
++ (DTJSValue *)valueWithJSFunction:(void *)value inContext:(DTJSContext *)context;
++ (DTJSValue *)valueWithPointer:(void *)value inContext:(DTJSContext *)context;
 + (DTJSValue *)valueWithObjcClass:(Class)cls inContext:(DTJSContext *)context;
 + (DTJSValue *)valueWithNewFunctionInContext:(DTJSContext *)context withCallback:(DTCFunction)aCallback noOfArgs:(NSInteger)nargs;
 + (DTJSValue *)valueWithValAtStackIndex:(duk_idx_t)index inContext:(DTJSContext *)context;
