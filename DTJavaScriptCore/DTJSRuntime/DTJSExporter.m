@@ -16,7 +16,21 @@
 DUK_C_FUNCTION(JSObjectDestructorCallback){
     
     if(ctx){
-    
+        DTJSContext *context = [DTJSContext currentContext];
+        if(context){
+            //this refers to object being destructed
+            DTJSValue *this = [DTJSContext currentThis];
+            if(this){
+                bool deleted = [this[@("\xFF" "deleted")] toBool];
+                if(!deleted){
+                    id nativeObj = [this[@("\xFF" "nativeRef")] toPointer];
+                    if([nativeObj isKindOfClass:[NSObject class]]){
+                        [nativeObj release];
+                    }
+                    this[@("\xFF" "deleted")] = [DTJSValue valueWithBool:true inContext:context];
+                }
+            }
+        }
     }
     return 0;
 }
@@ -44,7 +58,7 @@ DUK_C_FUNCTION(JSObjectConstructorCallback){
                 
                 //store the function destructor
                 [this push];//[... newObject]
-                duk_push_c_function(context.dukContext, JSObjectDestructorCallback, 1);
+                duk_push_c_function(context.dukContext, JSObjectDestructorCallback, 0);
                 duk_set_finalizer(context.dukContext, -2);
                 [this pop];//pops [... newObject]
             }

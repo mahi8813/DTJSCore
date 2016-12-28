@@ -907,4 +907,10 @@ typedef union Value{
     }
 }
 
+- (void *)toPointer{
+    void *value = duk_to_pointer(self.context.dukContext, [self push]);
+    [self pop];
+    return value;
+}
+
 @end

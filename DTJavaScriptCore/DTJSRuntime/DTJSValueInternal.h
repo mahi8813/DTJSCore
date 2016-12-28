@@ -26,5 +26,7 @@
 - (void)pop2;
 - (void *)objectValue;
 - (void)retainValue;
+- (void *)toPointer;
+
 
 @end
