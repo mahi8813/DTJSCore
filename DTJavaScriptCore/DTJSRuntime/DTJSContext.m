@@ -178,6 +178,33 @@ static DTJSContext *_currentContext = nil;
     return this;
 }
 
++ (DTJSValue *)currentCallee{
+    
+    DTJSValue *callee = nil;
+    DTJSContext *context = [DTJSContext currentContext];
+    if(context){
+        duk_push_current_function(context.dukContext);//[... newObj]
+        callee = [DTJSValue valueWithValAtStackTopInContext:context];
+        duk_pop(context.dukContext);//pops [... newObj]
+    }
+    return callee;
+}
+
++ (NSArray *)currentArguments{
+    
+    NSMutableArray *arguments = nil;
+    DTJSContext *context = [DTJSContext currentContext];
+    if(context){
+        arguments = [NSMutableArray array];
+        int nargs = duk_get_top(context.dukContext);
+        for (unsigned i = 0; i < nargs; i++) {
+            id obj = [[DTJSValue valueWithValAtStackIndex:i inContext:context] toObject];
+            [arguments addObject:obj];
+        }
+    }
+    return arguments;
+}
+
 @end
 
 @implementation DTJSContext (SubscriptSupport)

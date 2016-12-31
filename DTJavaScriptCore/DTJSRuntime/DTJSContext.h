@@ -24,6 +24,8 @@
 
 + (DTJSContext *)currentContext;
 + (DTJSValue *)currentThis;
++ (DTJSValue *)currentCallee;
++ (NSArray *)currentArguments;
 
 - (instancetype)init;
 - (instancetype)initWithVirtualMachine:(DTJSVirtualMachine *)virtualMachine;
