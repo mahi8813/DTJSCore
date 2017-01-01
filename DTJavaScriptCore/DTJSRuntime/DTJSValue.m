@@ -29,6 +29,7 @@ typedef union Value{
 }Value;
 
 @property (nonatomic, assign) Value *value;
+@property (nonatomic, assign) unsigned retainIndex;
 
 //redeclared to allow readwrite internally
 @property (readwrite) BOOL isUndefined;
@@ -57,6 +58,7 @@ typedef union Value{
     if(self = [super init]){
         self.value = (Value *)calloc(1, sizeof(Value));
         self.context = context;
+        self.retainIndex = NAN;
     }
     return self;
 }
@@ -73,6 +75,7 @@ typedef union Value{
         free(self.value);
         self.value = nil;
     }
+    [self releaseJSObjectValue];
     [super dealloc];
 }
 
@@ -86,7 +89,7 @@ typedef union Value{
             jsValue = [[DTJSValue alloc] initWithContext:context];
             jsValue.isString = true;
             jsValue.value->objectValue = (void *)duk_push_string(context.dukContext, [value cStringUsingEncoding:NSUTF8StringEncoding]);
-            [jsValue retainValue];
+            [jsValue retainJSObjectValue];
             duk_pop(context.dukContext);//pops string
         }
     }
@@ -203,7 +206,7 @@ typedef union Value{
         jsValue.isObject = true;
         duk_idx_t obj_idx = duk_push_object(context.dukContext);//[... obj]
         jsValue.value->objectValue = duk_require_heapptr(context.dukContext, obj_idx);
-        [jsValue retainValue];
+        [jsValue retainJSObjectValue];
         duk_pop(context.dukContext);//pops [... obj]
     }
     return jsValue;
@@ -217,7 +220,7 @@ typedef union Value{
         jsValue.isArray = true;
         duk_idx_t arr_idx = duk_push_array(context.dukContext);//[... arr]
         jsValue.value->objectValue = duk_require_heapptr(context.dukContext, arr_idx);
-        [jsValue retainValue];
+        [jsValue retainJSObjectValue];
         duk_pop(context.dukContext);//pops [... arr]
     }
     return jsValue;
@@ -231,7 +234,7 @@ typedef union Value{
         jsValue.isObject = true;
         duk_idx_t err_idx =  duk_push_error_object(context.dukContext, DUK_ERR_ERROR, [message cStringUsingEncoding:NSUTF8StringEncoding]);//[... err]
         jsValue.value->objectValue = duk_require_heapptr(context.dukContext, err_idx);
-        [jsValue retainValue];
+        [jsValue retainJSObjectValue];
         duk_pop(context.dukContext);//pops [... err]
     }
     return jsValue;
@@ -681,7 +684,7 @@ typedef union Value{
         jsValue = [[DTJSValue alloc] initWithContext:context];
         jsValue.isString = true;
         jsValue.value->objectValue = (void *)string;
-        [jsValue retainValue];
+        [jsValue retainJSObjectValue];
     }
     return jsValue;
 }
@@ -693,7 +696,7 @@ typedef union Value{
         jsValue = [[DTJSValue alloc] initWithContext:context];
         jsValue.isArray = true;
         jsValue.value->objectValue = array;
-        [jsValue retainValue];
+        [jsValue retainJSObjectValue];
     }
     return jsValue;
 }
@@ -705,7 +708,7 @@ typedef union Value{
         jsValue  = [[DTJSValue alloc] initWithContext:context];
         jsValue.isObject = true;
         jsValue.value->objectValue = value;
-        [jsValue retainValue];
+        [jsValue retainJSObjectValue];
     }
     return jsValue;
 }
@@ -717,7 +720,7 @@ typedef union Value{
         jsValue  = [[DTJSValue alloc] initWithContext:context];
         jsValue.isFunction = true;
         jsValue.value->objectValue = value;
-        [jsValue retainValue];
+        [jsValue retainJSObjectValue];
     }
     return jsValue;
 }
@@ -754,7 +757,7 @@ typedef union Value{
         jsValue.isFunction = true;
         duk_idx_t obj_idx =  duk_push_c_function(context.dukContext, aCallback, (duk_idx_t)nargs);//[... obj]
         jsValue.value->objectValue = duk_require_heapptr(context.dukContext, obj_idx);
-        [jsValue retainValue];
+        [jsValue retainJSObjectValue];
         duk_pop(context.dukContext);//pops [... obj]
     }
     return jsValue;
@@ -881,31 +884,52 @@ typedef union Value{
     return nil;
 }
 
-- (void)retainValue{
+- (void)retainJSObjectValue{
     
     if(self.isString ||
        self.isArray ||
        self.isObject ||
        self.isFunction){
         duk_push_global_stash(self.context.dukContext);//[... gblStash]
-        duk_bool_t success = duk_get_prop_string(self.context.dukContext, -1, "retainArray");//[... gblStash, arr/unf]
-        if(!success){
-            duk_pop(self.context.dukContext);//pops unf
+        
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
             duk_push_array(self.context.dukContext);//[... gblStash, arr]
             duk_put_prop_string(self.context.dukContext, -2, "retainArray");//[... gblStash]
-            duk_get_prop_string(self.context.dukContext, -1, "retainArray");//[... gblStash, arr]
-        }
+        });
         
-        if(duk_is_array(self.context.dukContext, -1)){
-            //get length of the retainArray
-            duk_size_t retArrlen = duk_get_length(self.context.dukContext, -1);
-            //push jsValue in the array
-            duk_push_heapptr(self.context.dukContext, self.objectValue);//[... gblStash, arr, val]
-            duk_put_prop_index(self.context.dukContext, -2, (duk_uarridx_t)retArrlen);//[... gblStash, arr]
-            duk_pop_2(self.context.dukContext);//pops [... gblStash, arr]
+        duk_bool_t success = duk_get_prop_string(self.context.dukContext, -1, "retainArray");//[... gblStash, arr/unf]
+        if(success){
+            if(duk_is_array(self.context.dukContext, -1)){
+                static duk_uarridx_t arr_idx = -1;
+                //push jsValue in the array
+                duk_push_heapptr(self.context.dukContext, self.objectValue);//[... gblStash, arr, val]
+                duk_put_prop_index(self.context.dukContext, -2, ++arr_idx);//[... gblStash, arr]
+                self.retainIndex = arr_idx;
+            }
+        }
+        duk_pop_2(self.context.dukContext);//pops [... gblStash, arr/unf]
+    }
+}
+
+- (void)releaseJSObjectValue{
+    
+    if(self.isString ||
+       self.isArray ||
+       self.isObject ||
+       self.isFunction){
+        if(!isnan(self.retainIndex)){
+            duk_push_global_stash(self.context.dukContext);//[... gblStash]
+            duk_bool_t success = duk_get_prop_string(self.context.dukContext, -1, "retainArray");//[... gblStash, arr/unf]
+            if(success){
+                if(duk_is_array(self.context.dukContext, -1)){
+                    duk_del_prop_index(self.context.dukContext, -1, self.retainIndex);
+                }
+            }
         }
     }
 }
+
 
 - (void *)toPointer{
     void *value = duk_to_pointer(self.context.dukContext, [self push]);

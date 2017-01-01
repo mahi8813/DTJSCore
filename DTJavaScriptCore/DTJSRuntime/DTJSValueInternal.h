@@ -25,7 +25,8 @@
 - (void)pop;
 - (void)pop2;
 - (void *)objectValue;
-- (void)retainValue;
+- (void)retainJSObjectValue;
+- (void)releaseJSObjectValue;
 - (void *)toPointer;
 
 

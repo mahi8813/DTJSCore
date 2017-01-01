@@ -13,11 +13,11 @@
 #import "DTJSConstants.h"
 #import <objc/runtime.h>
 
-DUK_C_FUNCTION(JSObjectDestructorCallback){
+DUK_C_FUNCTION(JSExportDestructorCallback){
     
     if(ctx){
         DTJSContext *context = [DTJSContext currentContext];
-        if(context){
+        if(context && context.dukContext == ctx){
             //this refers to object being destructed
             DTJSValue *this = [DTJSContext currentThis];
             if(this){
@@ -25,7 +25,7 @@ DUK_C_FUNCTION(JSObjectDestructorCallback){
                 if(!deleted){
                     id nativeObj = [this[@("\xFF" "nativeRef")] toPointer];
                     if([nativeObj isKindOfClass:[NSObject class]]){
-                        [nativeObj release];
+                        [nativeObj release];nativeObj = 0;
                     }
                     this[@("\xFF" "deleted")] = [DTJSValue valueWithBool:true inContext:context];
                 }
@@ -35,54 +35,57 @@ DUK_C_FUNCTION(JSObjectDestructorCallback){
     return 0;
 }
 
-DUK_C_FUNCTION(JSObjectConstructorCallback){
+DUK_C_FUNCTION(JSExportConstructorCallback){
     
     //check if constructor is invoked using new
     if(ctx && duk_is_constructor_call(ctx)){
         DTJSContext *context = [DTJSContext currentContext];
         if(context && context.dukContext == ctx){
-            //this refers to object being constructed
-            DTJSValue *this = [DTJSContext currentThis];
-            if(this){
-                DTJSValue *className = this[@("\xFF" "className")];
-                if(className){
-                    Class class = NSClassFromString([className toString]);
-                    id obj = [[class alloc] init];
-                    //store the native reference
-                    this[@("\xFF" "nativeRef")] = [DTJSValue valueWithPointer:(void *)obj inContext:context];
+            DTJSValue *curFunc = [DTJSContext currentCallee];
+            if(curFunc){
+                DTJSValue *clsName = curFunc[@("\xFF" "className")];
+                if(clsName){
+                    Class cls = NSClassFromString([clsName toString]);
+                    id nativeObj = [[cls alloc] init];
+                    //this refers to object being constructed
+                    DTJSValue *this = [DTJSContext currentThis];
+                    if(this){
+                        //store the native reference
+                        this[@("\xFF" "nativeRef")] = [DTJSValue valueWithPointer:(void *)nativeObj inContext:context];
+                        
+                        //store a boolean flag to mark the object as deleted
+                        //because the destructor may be called several times
+                        this[@("\xFF" "deleted")] = [DTJSValue valueWithBool:false inContext:context];
+                        
+                        //store the object destructor
+                        [this push];//[... newObject]
+                        duk_push_c_function(context.dukContext, JSExportDestructorCallback, 0);
+                        duk_set_finalizer(context.dukContext, -2);
+                        [this pop];//pops [... newObject]
+                    }
                 }
-                
-                //store a boolean flag to mark the object as deleted
-                //because the destructor may be called several times
-                this[@("\xFF" "deleted")] = [DTJSValue valueWithBool:false inContext:context];
-                
-                //store the function destructor
-                [this push];//[... newObject]
-                duk_push_c_function(context.dukContext, JSObjectDestructorCallback, 0);
-                duk_set_finalizer(context.dukContext, -2);
-                [this pop];//pops [... newObject]
             }
         }
     }
     return 0;
 }
 
-DUK_C_FUNCTION(JSObjectClassMethodCallback){
+DUK_C_FUNCTION(JSExportClassMethodCallback){
     
     return 0;
 }
 
-DUK_C_FUNCTION(JSObjectInstanceMethodCallback){
+DUK_C_FUNCTION(JSExportInstanceMethodCallback){
     
     return 0;
 }
 
-DUK_C_FUNCTION(JSObjectPropertySetterCallback){
+DUK_C_FUNCTION(JSExportPropertySetterCallback){
     
     return 0;
 }
 
-DUK_C_FUNCTION(JSObjectPropertyGetterCallback){
+DUK_C_FUNCTION(JSExportPropertyGetterCallback){
     
     return 0;
 }
@@ -128,11 +131,11 @@ DUK_C_FUNCTION(JSObjectPropertyGetterCallback){
             DTCFunction dukCFunction = nil;
             if ([@(protocol_getName(protocol)) hasSuffix: @"ClassExports"]){
                 methods = protocol_copyMethodDescriptionList(protocol, YES, NO, &outCount);
-                dukCFunction = JSObjectClassMethodCallback;
+                dukCFunction = JSExportClassMethodCallback;
             }
             else if ([@(protocol_getName(protocol)) hasSuffix: @"InstanceExports"]){
                 methods = protocol_copyMethodDescriptionList(protocol, YES, YES, &outCount);
-                dukCFunction = JSObjectInstanceMethodCallback;
+                dukCFunction = JSExportInstanceMethodCallback;
                 classObj = classObj[@"prototype"];
             }
             if(methods){
@@ -167,7 +170,7 @@ DUK_C_FUNCTION(JSObjectPropertyGetterCallback){
                     
                     //descriptor
                     NSMutableDictionary *descriptor = [NSMutableDictionary dictionary];
-                    NSValue *getterValue = [[NSValue valueWithPointer:(void *)JSObjectPropertyGetterCallback] retain];
+                    NSValue *getterValue = [[NSValue valueWithPointer:(void *)JSExportPropertyGetterCallback] retain];
                     [descriptor setValue:getterValue forKey:JSPropertyDescriptorGetKey];
                     [descriptor setValue:[NSNumber numberWithBool:false] forKey:JSPropertyDescriptorEnumerableKey];
                     [descriptor setValue:[NSNumber numberWithBool:true]  forKey:JSPropertyDescriptorConfigurableKey];
@@ -176,7 +179,7 @@ DUK_C_FUNCTION(JSObjectPropertyGetterCallback){
                     const char *propertyAttributes = property_getAttributes(properties[i]);
                     NSArray *attributes = [[NSString stringWithUTF8String:propertyAttributes] componentsSeparatedByString:@","];
                     if(![attributes containsObject:@"R"]){
-                        NSValue *setterValue = [[NSValue valueWithPointer:(void *)JSObjectPropertySetterCallback] retain];
+                        NSValue *setterValue = [[NSValue valueWithPointer:(void *)JSExportPropertySetterCallback] retain];
                         [descriptor setValue:setterValue forKey:JSPropertyDescriptorSetKey];
                         [descriptor setValue:[NSNumber numberWithBool:true] forKey:JSPropertyDescriptorEnumerableKey];
                     }
@@ -226,7 +229,7 @@ DUK_C_FUNCTION(JSObjectPropertyGetterCallback){
             if(!classObj){
                 {
                     //create jsObject for the class
-                    classObj = [DTJSValue valueWithNewFunctionInContext:context withCallback:JSObjectConstructorCallback noOfArgs:0];
+                    classObj = [DTJSValue valueWithNewFunctionInContext:context withCallback:JSExportConstructorCallback noOfArgs:0];
                     
                     //add a prototype object to the classObj
                     classObj[@"prototype"] = [DTJSValue valueWithNewObjectInContext:context];
